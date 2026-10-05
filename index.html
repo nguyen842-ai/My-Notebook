@@ -758,6 +758,8 @@
             if (tabFolders.length === 0) folderListEl.innerHTML = '<div style="font-size:13px; color:var(--color-stone-gray); font-style:italic;">Chưa có thư mục</div>'; 
             tabFolders.forEach(f => {
                 folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`;
+            // ĐÃ THÊM NÚT EDIT BÊN DƯỚI DÒNG NÀY:
+                folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="editFolder('${f.id}')">✏️</button><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`;
             });
         }
 
@@ -840,6 +842,37 @@
         window.deleteTab = async function(id) { if(allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!"); if(confirm(`Xác nhận xóa tab này?`)) { await deleteDoc(doc(db, "notebook_tabs", id)); if(currentTabId === id) currentTabId = allTabs.find(t => t.id !== id).id; showToast("Đã xóa Tab!"); await loadCoreData(); } }
         window.createNewFolder = async function() { const name = document.getElementById('newFolderName').value.trim(); const imageUrl = document.getElementById('newFolderImage').value.trim(); if(!name) return showToast("Vui lòng nhập tên Thư mục!"); const folderRef = await addDoc(foldersCollection, { userId: currentUser.uid, tabId: currentTabId, name: name, image: imageUrl, createdAt: new Date().toISOString() }); document.getElementById('newFolderName').value = ""; document.getElementById('newFolderImage').value = ""; showToast("Đã tạo Thư mục!"); await loadCoreData(); const selectEl = document.getElementById('folderSelect'); if(selectEl) selectEl.value = folderRef.id; }
         window.deleteFolder = async function(id) { if(confirm(`Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.`)) { await deleteDoc(doc(db, "notebook_folders", id)); showToast("Đã xóa Thư mục!"); if(currentFolderViewId === id) closeFolderView(); await loadCoreData(); } }
+        // --- CHỈNH SỬA THƯ MỤC ---
+        window.editFolder = async function(id) {
+            const folder = allFolders.find(f => f.id === id);
+            if (!folder) return;
+
+            const newName = prompt("Nhập tên mới cho Thư mục:", folder.name);
+            if (newName === null) return; // Người dùng bấm Hủy (Cancel)
+
+            const newImage = prompt("Nhập link ảnh bìa mới (để trống nếu chỉ dùng màu nền):", folder.image || "");
+            if (newImage === null) return; // Người dùng bấm Hủy (Cancel)
+
+            if (newName.trim() !== "") {
+                // Cập nhật lên Firebase
+                await updateDoc(doc(db, "notebook_folders", id), { 
+                    name: newName.trim(),
+                    image: newImage.trim() 
+                });
+                
+                showToast("Đã cập nhật Thư mục!");
+                
+                // Nếu đang mở đúng thư mục đó thì cập nhật luôn tiêu đề đang hiển thị
+                if (currentFolderViewId === id) {
+                    document.getElementById('folderDetailTitle').innerText = newName.trim();
+                }
+                
+                // Tải lại dữ liệu để cập nhật UI
+                await loadCoreData();
+            } else {
+                showToast("Tên thư mục không được để trống!");
+            }
+        }
         
         async function switchTab(tabId) { 
             if (currentTabId === tabId) return; // Chặn render lại nếu tab đang mở
