@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Notebook</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -168,6 +168,13 @@
         #main-app { display: none; width: 100%; height: 100vh; position: relative; }
         .main-content { flex-grow: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 0 40px; }
         
+        /* Hiệu ứng mượt mà khi chuyển đổi các view (Tabs, Editor, Folders) */
+        @keyframes fadeInSmooth {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        main { animation: fadeInSmooth 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
         /* Khi Editor mở ra, chặn cuộn toàn màn hình để ghim thanh công cụ */
         body.editor-open .main-content { overflow: hidden; }
 
@@ -294,11 +301,28 @@
         #toast { visibility: hidden; background-color: var(--user-text-color); color: rgba(var(--color-paper-white-rgb), 1); text-align: center; padding: 12px 24px; position: fixed; z-index: 4000; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 500; border-radius: 999px; opacity: 0; transition: opacity 0.3s; }
         #toast.show { visibility: visible; opacity: 1; }
 
-        /* Mobile Adjustments */
+        /* Mobile Adjustments & iOS Safe Area */
         @media (max-width: 768px) {
-            .main-content { padding: 0 16px; }
+            .main-content {
+                /* Canh lề thông minh né Tai thỏ/Dynamic Island và Home Indicator */
+                padding-top: max(env(safe-area-inset-top), 24px);
+                padding-bottom: max(env(safe-area-inset-bottom), 24px);
+                padding-left: max(env(safe-area-inset-left), 16px);
+                padding-right: max(env(safe-area-inset-right), 16px);
+            }
             .editor-section { padding: 24px 20px; }
             .input-title { font-size: 28px; }
+
+            /* Ép thẻ thư mục hiển thị 2 cột trên 1 dòng */
+            .folder-grid { gap: 16px; margin-bottom: 32px; }
+            .folder-box {
+                width: calc(50% - 8px); /* Chia đôi màn hình trừ đi một nửa gap */
+                min-width: unset; /* Gỡ giới hạn 160px để không bị đẩy xuống dòng */
+                min-height: 120px;
+                padding: 16px;
+                box-sizing: border-box;
+            }
+            .folder-name { font-size: 16px; }
         }
     </style>
 </head>
@@ -306,7 +330,7 @@
     <!-- OVERLAY ẢNH NỀN 25% -->
     <div class="bg-overlay"></div>
 
-    <!-- Thay thế thẻ startup-loader cũ -->
+    <!-- Màn hình chờ loader -->
     <div id="startup-loader">
         <div class="loader-container">
             <div class="loader"></div>
@@ -402,7 +426,7 @@
                     </div>
                 </details>
 
-                <button class="btn btn-full" onclick="openTrashModal()" style="margin-top: 24px;">🗑️ Thùng rác</button>
+                <button class="btn btn-full" onclick="openTrashModal()" style="margin-top: 24px;">🗑️️ Thùng rác</button>
                 <button class="btn btn-full" onclick="handleLogout()" style="margin-top: 12px;">Đăng Xuất</button>
             </div>
 
@@ -525,12 +549,14 @@
         let allDiariesGlobal = []; 
         let currentEditingId = null;
         let activeEntriesData = {}; 
-        // Khởi tạo các biến toàn cục
+
+        // Khởi tạo các biến toàn cục (Đã xóa dòng khai báo trùng lặp)
         let allTabs = []; let allFolders = []; let currentTabId = null; let currentFolderViewId = null; 
 
-        // THÊM DÒNG NÀY: Lưu lại thời điểm bắt đầu load trang
+        // Lưu lại thời điểm bắt đầu load trang
         const loaderStartTime = Date.now();
         const LOADER_ANIMATION_CYCLE = 3000; // 3 giây (3000ms) khớp với CSS
+        
         const emailInput = document.getElementById('auth-email');
         const passwordInput = document.getElementById('auth-password');
         const authMsg = document.getElementById('auth-message');
@@ -792,7 +818,14 @@
         window.deleteTab = async function(id) { if(allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!"); if(confirm(`Xác nhận xóa tab này?`)) { await deleteDoc(doc(db, "notebook_tabs", id)); if(currentTabId === id) currentTabId = allTabs.find(t => t.id !== id).id; showToast("Đã xóa Tab!"); await loadCoreData(); } }
         window.createNewFolder = async function() { const name = document.getElementById('newFolderName').value.trim(); const imageUrl = document.getElementById('newFolderImage').value.trim(); if(!name) return showToast("Vui lòng nhập tên Thư mục!"); const folderRef = await addDoc(foldersCollection, { userId: currentUser.uid, tabId: currentTabId, name: name, image: imageUrl, createdAt: new Date().toISOString() }); document.getElementById('newFolderName').value = ""; document.getElementById('newFolderImage').value = ""; showToast("Đã tạo Thư mục!"); await loadCoreData(); const selectEl = document.getElementById('folderSelect'); if(selectEl) selectEl.value = folderRef.id; }
         window.deleteFolder = async function(id) { if(confirm(`Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.`)) { await deleteDoc(doc(db, "notebook_folders", id)); showToast("Đã xóa Thư mục!"); if(currentFolderViewId === id) closeFolderView(); await loadCoreData(); } }
-        async function switchTab(tabId) { currentTabId = tabId; closeEditor(); closeFolderView(); renderTabs(); renderFolderSelect(); renderSidebarSettings(); await loadEntries(); }
+        
+        async function switchTab(tabId) { 
+            if (currentTabId === tabId) return; // Chặn render lại nếu tab đang mở
+            currentTabId = tabId; 
+            closeEditor(); closeFolderView(); 
+            renderTabs(); renderFolderSelect(); renderSidebarSettings(); 
+            await loadEntries(); 
+        }
 
         // --- ĐIỀU HƯỚNG ---
         window.openFolderView = function(folderId) {
