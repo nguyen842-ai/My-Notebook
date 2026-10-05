@@ -301,29 +301,51 @@
         #toast { visibility: hidden; background-color: var(--user-text-color); color: rgba(var(--color-paper-white-rgb), 1); text-align: center; padding: 12px 24px; position: fixed; z-index: 4000; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 500; border-radius: 999px; opacity: 0; transition: opacity 0.3s; }
         #toast.show { visibility: visible; opacity: 1; }
 
-        /* Mobile Adjustments & iOS Safe Area */
+                /* Mobile Adjustments & iOS Safe Area */
         @media (max-width: 768px) {
             .main-content {
-                /* Canh lề thông minh né Tai thỏ/Dynamic Island và Home Indicator */
-                padding-top: max(env(safe-area-inset-top), 24px);
+                /* Dời toàn bộ khung nội dung xuống dưới Dynamic Island thêm một khoảng an toàn */
+                padding-top: calc(max(env(safe-area-inset-top), 24px) + 16px);
                 padding-bottom: max(env(safe-area-inset-bottom), 24px);
                 padding-left: max(env(safe-area-inset-left), 16px);
                 padding-right: max(env(safe-area-inset-right), 16px);
             }
+
+            /* Dời nút menu xuống y hệt mép trên của nội dung */
+            #openMenuBtn {
+                top: calc(max(env(safe-area-inset-top), 24px) + 16px);
+                right: 16px;
+                width: 44px;  /* Nới rộng xíu cho dễ chạm */
+                height: 44px;
+            }
+
+            /* Ép tiêu đề nằm ngang hàng với nút Menu */
+            .diary-title { 
+                font-size: 32px; 
+                margin: 0 0 24px 0; 
+                min-height: 44px; /* Chiều cao khớp chính xác với chiều cao nút Menu */
+                display: flex; 
+                align-items: center; /* Căn giữa chữ với nút theo trục dọc */
+                padding-right: 56px; /* Tạo khoảng lề phải để chữ không bao giờ chui xuống dưới nút */
+            }
+
             .editor-section { padding: 24px 20px; }
-            .input-title { font-size: 28px; }
+            
+            /* Tương tự, chừa lề cho tiêu đề lúc đang gõ bài viết để không bị nút Menu che */
+            .input-title { font-size: 28px; padding-right: 56px; } 
 
             /* Ép thẻ thư mục hiển thị 2 cột trên 1 dòng */
             .folder-grid { gap: 16px; margin-bottom: 32px; }
             .folder-box {
-                width: calc(50% - 8px); /* Chia đôi màn hình trừ đi một nửa gap */
-                min-width: unset; /* Gỡ giới hạn 160px để không bị đẩy xuống dòng */
+                width: calc(50% - 8px); /* Chia đôi màn hình trừ đi một nửa khoảng cách gap */
+                min-width: unset; /* Gỡ giới hạn chống rớt dòng */
                 min-height: 120px;
                 padding: 16px;
                 box-sizing: border-box;
             }
             .folder-name { font-size: 16px; }
         }
+
     </style>
 </head>
 <body>
