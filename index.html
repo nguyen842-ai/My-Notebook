@@ -2,7 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- ĐÃ SỬA: Thêm maximum-scale=1.0 và user-scalable=no để chống phóng to trang -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>My Notebook</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,11 +32,21 @@
             --hover-bg: rgba(150, 150, 150, 0.1);
         }
 
+        /* ĐÃ SỬA: Đồng bộ màu nền ngoài cùng, chặn vuốt nảy trang (overscroll) và chặn zoom dế */
+        html, body {
+            overscroll-behavior-y: none;
+            background-color: var(--color-warm-parchment);
+        }
+        * {
+            touch-action: manipulation;
+        }
+
         /* --- CHẾ ĐỘ TỐI (DARK MODE) --- */
-        body.dark-mode {
+        html.dark-mode, body.dark-mode {
             --color-warm-parchment: #18181a;
             --color-paper-white-rgb: 36, 36, 38;
             --color-stone-gray: #9e9e9e;
+            background-color: #18181a; /* Đảm bảo viền ngoài cùng cũng đen */
         }
 
         body { 
@@ -43,9 +54,7 @@
             color: var(--user-text-color); 
             margin: 0; padding: 0; line-height: 1.6; height: 100vh; overflow: hidden; 
             -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-            background-color: var(--color-warm-parchment);
             background-size: cover; background-position: center center;
-            /* Đã xóa background-attachment: fixed; để sửa lỗi iOS */
         }
 
         .bg-overlay {
@@ -68,50 +77,26 @@
         #startup-loader {
             position: fixed; inset: 0; background: var(--color-warm-parchment); 
             z-index: 100000; display: flex; justify-content: center; align-items: center; 
-            transition: opacity 0.5s ease-out; /* Giữ lại hiệu ứng mờ dần khi ẩn */
+            transition: opacity 0.5s ease-out;
         }
 
-        .loader-container {
-            position: relative;
-            width: 160px;
-            height: 100px;
-        }
+        .loader-container { position: relative; width: 160px; height: 100px; }
 
         .loader {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            z-index: 10;
-            width: 160px;
-            height: 100px;
-            margin-left: -80px;
-            margin-top: -50px;
-            border-radius: 5px;
-            background: #1e3f57;
-            /* Chu kỳ animation là 3s */
+            position: absolute; top: 50%; left: 50%; z-index: 10;
+            width: 160px; height: 100px; margin-left: -80px; margin-top: -50px;
+            border-radius: 5px; background: #1e3f57;
             animation: dot1_ 3s cubic-bezier(0.55,0.3,0.24,0.99) infinite;
         }
 
         .loader:nth-child(2) {
-            z-index: 11;
-            width: 150px;
-            height: 90px;
-            margin-top: -45px;
-            margin-left: -75px;
-            border-radius: 3px;
-            background: #3c517d;
-            animation-name: dot2_;
+            z-index: 11; width: 150px; height: 90px; margin-top: -45px; margin-left: -75px;
+            border-radius: 3px; background: #3c517d; animation-name: dot2_;
         }
 
         .loader:nth-child(3) {
-            z-index: 12;
-            width: 40px;
-            height: 20px;
-            margin-top: 50px;
-            margin-left: -20px;
-            border-radius: 0 0 5px 5px;
-            background: #6bb2cd;
-            animation-name: dot3_;
+            z-index: 12; width: 40px; height: 20px; margin-top: 50px; margin-left: -20px;
+            border-radius: 0 0 5px 5px; background: #6bb2cd; animation-name: dot3_;
         }
 
         @keyframes dot1_ {
@@ -140,17 +125,13 @@
             padding: 8px 16px; border-radius: 8px; outline: none; border: none !important;
             font-family: var(--font-super); font-size: 14px; font-weight: 500;
             cursor: pointer; transition: 0.2s; text-decoration: none;
-            
-            /* Phủ toàn bộ bằng màu nút và màu chữ của người dùng */
             background-color: var(--user-btn-color) !important; 
-            color: var(--user-text-color) !important;
-            opacity: 1 !important;
+            color: var(--user-text-color) !important; opacity: 1 !important;
         }
         .btn:hover { filter: brightness(1.15); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
         .btn:active { transform: scale(0.98); }
         .btn-full { width: 100%; margin-top: 8px; }
 
-        /* Các nút icon không viền (icon actions) */
         .icon-btn { background: transparent; border: none; cursor: pointer; color: var(--user-text-color); font-size: 16px; opacity: 0.6; transition: 0.2s; padding: 4px; }
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
 
@@ -169,20 +150,17 @@
         #main-app { display: none; width: 100%; height: 100vh; position: relative; }
         .main-content { flex-grow: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 0 40px; }
         
-        /* Hiệu ứng mượt mà khi chuyển đổi các view (Tabs, Editor, Folders) */
         @keyframes fadeInSmooth {
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
         main { animation: fadeInSmooth 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
-        /* Khi Editor mở ra, chặn cuộn toàn màn hình để ghim thanh công cụ */
         body.editor-open .main-content { overflow: hidden; }
 
         .container { width: 100%; max-width: 1000px; margin: 64px auto; display: flex; flex-direction: column; flex-grow: 1; min-height: 0;}
         .diary-title { font-size: 48px; font-weight: 500; margin: 0 0 48px 0; color: var(--user-text-color); letter-spacing: -1px; flex-shrink: 0;}
 
-        /* Nút Menu tròn góc phải trên */
         #openMenuBtn { position: fixed; top: 24px; right: 24px; z-index: 900; border-radius: 50%; width: 48px; height: 48px; font-size: 20px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;}
 
         /* --- SIDEBAR --- */
@@ -242,52 +220,25 @@
         /* ========================================================= */
         /* GIAO DIỆN EDITOR FLEXBOX (CHỈ CUỘN VĂN BẢN - FROZEN TOOLBAR) */
         /* ========================================================= */
-        .editor-section { 
-            border-radius: 16px; padding: 32px 40px; margin-bottom: 24px; 
-            display: flex; flex-direction: column; flex-grow: 1; min-height: 0; 
-        }
-        
-        .editor-header {
-            display: flex; justify-content: space-between; align-items: center; gap: 16px; 
-            margin-bottom: 24px; flex-shrink: 0; border-bottom: 1px solid var(--color-soft-mist); padding-bottom: 16px;
-        }
-
-        .input-title { 
-            flex-grow: 1; border: none; font-size: 36px; font-weight: 600; 
-            background: transparent; color: var(--user-text-color); outline: none; font-family: var(--font-super); 
-            min-width: 0; /* Tránh tràn chữ flexbox */
-        }
+        .editor-section { border-radius: 16px; padding: 32px 40px; margin-bottom: 24px; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        .editor-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-shrink: 0; border-bottom: 1px solid var(--color-soft-mist); padding-bottom: 16px; }
+        .input-title { flex-grow: 1; border: none; font-size: 36px; font-weight: 600; background: transparent; color: var(--user-text-color); outline: none; font-family: var(--font-super); min-width: 0; }
         .input-title::placeholder { color: var(--color-stone-gray); opacity: 0.5; }
-        
-        /* Chế độ Editable khi Input Title đang khoá (Chỉ đọc) */
         .input-title[readonly] { pointer-events: none; }
 
         .editor-container { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
         
-        .toolbar-horizontal { 
-            display: flex; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-soft-mist); 
-            margin-bottom: 16px; flex-shrink: 0; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap;
-        }
+        .toolbar-horizontal { display: flex; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-soft-mist); margin-bottom: 16px; flex-shrink: 0; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; }
         .toolbar-horizontal::-webkit-scrollbar { display: none; }
         .toolbar-horizontal .btn { padding: 6px 12px; font-size: 13px; flex-shrink: 0;}
 
-        /* Vùng cuộn văn bản cốt lõi */
         .editor-main-area { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-        .editor-box { 
-            flex-grow: 1; overflow-y: auto; outline: none; font-size: var(--editor-fs) !important; 
-            line-height: 1.8; color: var(--user-text-color); font-weight: 400; 
-            padding-right: 8px; /* Cừa lề cho thanh cuộn */
-        }
+        .editor-box { flex-grow: 1; overflow-y: auto; outline: none; font-size: var(--editor-fs) !important; line-height: 1.8; color: var(--user-text-color); font-weight: 400; padding-right: 8px; }
         .editor-box[placeholder]:empty:before { content: attr(placeholder); color: var(--color-stone-gray); opacity: 0.7; pointer-events: none; display: block; }
-        /* Tuỳ chỉnh thanh cuộn trong khung viết */
         .editor-box::-webkit-scrollbar { width: 6px; }
         .editor-box::-webkit-scrollbar-thumb { background-color: var(--color-soft-mist); border-radius: 10px; }
         
-        /* Bar phía dưới được ghim */
-        #editorBottomBar {
-            display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; align-items: center; 
-            border-top: 1px solid var(--color-soft-mist); padding-top: 24px; justify-content: space-between; flex-shrink: 0;
-        }
+        #editorBottomBar { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; align-items: center; border-top: 1px solid var(--color-soft-mist); padding-top: 24px; justify-content: space-between; flex-shrink: 0; }
         .word-count-display { font-size: 13px; color: var(--color-stone-gray); text-align: right; }
         .folder-select { padding: 8px 12px; font-family: var(--font-super); font-size: 14px; background: rgba(var(--color-paper-white-rgb), 0.5); color: var(--user-text-color); border: 1px solid var(--color-soft-mist); border-radius: 8px; outline: none; cursor: pointer; }
 
@@ -302,61 +253,26 @@
         #toast { visibility: hidden; background-color: var(--user-text-color); color: rgba(var(--color-paper-white-rgb), 1); text-align: center; padding: 12px 24px; position: fixed; z-index: 4000; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 500; border-radius: 999px; opacity: 0; transition: opacity 0.3s; }
         #toast.show { visibility: visible; opacity: 1; }
 
-                /* Mobile Adjustments & iOS Safe Area */
         @media (max-width: 768px) {
             .main-content {
-                /* Dời toàn bộ khung nội dung xuống dưới Dynamic Island thêm một khoảng an toàn */
                 padding-top: calc(max(env(safe-area-inset-top), 24px) + 16px);
                 padding-bottom: max(env(safe-area-inset-bottom), 24px);
                 padding-left: max(env(safe-area-inset-left), 16px);
                 padding-right: max(env(safe-area-inset-right), 16px);
             }
-
-            /* Dời nút menu xuống y hệt mép trên của nội dung */
-            #openMenuBtn {
-                top: calc(max(env(safe-area-inset-top), 24px) + 16px);
-                right: 16px;
-                width: 44px;  /* Nới rộng xíu cho dễ chạm */
-                height: 44px;
-            }
-
-            /* Ép tiêu đề nằm ngang hàng với nút Menu */
-            .diary-title { 
-                font-size: 32px; 
-                margin: 0 0 24px 0; 
-                min-height: 44px; /* Chiều cao khớp chính xác với chiều cao nút Menu */
-                display: flex; 
-                align-items: center; /* Căn giữa chữ với nút theo trục dọc */
-                padding-right: 56px; /* Tạo khoảng lề phải để chữ không bao giờ chui xuống dưới nút */
-            }
-
+            #openMenuBtn { top: calc(max(env(safe-area-inset-top), 24px) + 16px); right: 16px; width: 44px; height: 44px; }
+            .diary-title { font-size: 32px; margin: 0 0 24px 0; min-height: 44px; display: flex; align-items: center; padding-right: 56px; }
             .editor-section { padding: 24px 20px; }
-            
-            /* Tương tự, chừa lề cho tiêu đề lúc đang gõ bài viết để không bị nút Menu che */
             .input-title { font-size: 28px; padding-right: 56px; } 
-
-            /* Ép thẻ thư mục hiển thị 2 cột trên 1 dòng */
             .folder-grid { gap: 16px; margin-bottom: 32px; }
-            .folder-box {
-                /* Giữ nguyên các thông số cũ của bạn */
-                width: calc(50% - 8px); 
-                min-width: unset; 
-                min-height: 120px;
-                padding: 16px;
-                box-sizing: border-box;
-                /* Chỉnh lại cách hiển thị ảnh cho mượt trên iPhone */
-                background-position: top center; /* Giữ lại phần quan trọng ở trên cùng */
-            }
+            .folder-box { width: calc(50% - 8px); min-width: unset; min-height: 120px; padding: 16px; box-sizing: border-box; background-position: top center; }
             .folder-name { font-size: 16px; }
         }
-
     </style>
 </head>
 <body>
-    <!-- OVERLAY ẢNH NỀN 25% -->
     <div class="bg-overlay"></div>
 
-    <!-- Màn hình chờ loader -->
     <div id="startup-loader">
         <div class="loader-container">
             <div class="loader"></div>
@@ -365,7 +281,6 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP -->
     <div id="auth-screen">
         <div class="auth-container glass-panel">
             <h1 class="app-title-display">My Notebook</h1>
@@ -378,9 +293,7 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH CHÍNH -->
     <div id="main-app">
-        <!-- Nút mở Menu -->
         <button class="btn glass-panel" id="openMenuBtn">☰</button>
 
         <div class="sidebar glass-panel" id="sidebar">
@@ -394,7 +307,6 @@
                     ✍️ Viết bài mới
                 </button>
 
-                <!-- CÀI ĐẶT GIAO DIỆN -->
                 <details class="menu-accordion">
                     <summary>🎨 Cài đặt Giao diện <span>▾</span></summary>
                     <div class="accordion-content">
@@ -421,13 +333,19 @@
                         <div style="margin-top: 16px;">
                             <label style="font-size: 14px; margin-bottom: 4px; display: block;">Link ảnh nền (URL):</label>
                             <input type="text" id="settingBgUrl" class="setting-input" placeholder="Nhập link ảnh..." style="margin:0;">
+                            
+                            <!-- ĐÃ SỬA: Nút Upload và Cắt ảnh nội bộ -->
+                            <input type="file" id="localBgUploader" accept="image/*" style="display: none;">
+                            <button class="btn btn-full" onclick="document.getElementById('localBgUploader').click()" style="margin-top: 8px; background-color: var(--color-stone-gray) !important;">
+                                Tải ảnh từ máy (Tự động cắt)
+                            </button>
+
                             <div class="history-grid-container" id="imageHistoryGrid"></div>
                             <button class="btn btn-full" onclick="saveVisualSettings()" style="margin-top: 12px;">Lưu Cài Đặt</button>
                         </div>
                     </div>
                 </details>
 
-                <!-- QUẢN LÝ TABS -->
                 <details class="menu-accordion">
                     <summary>📁 Quản lý Tabs <span>▾</span></summary>
                     <div class="accordion-content">
@@ -439,7 +357,6 @@
                     </div>
                 </details>
 
-                <!-- QUẢN LÝ THƯ MỤC -->
                 <details class="menu-accordion">
                     <summary>📂 Quản lý Thư mục <span>▾</span></summary>
                     <div class="accordion-content">
@@ -452,7 +369,7 @@
                     </div>
                 </details>
 
-                <button class="btn btn-full" onclick="openTrashModal()" style="margin-top: 24px;">🗑️️ Thùng rác</button>
+                <button class="btn btn-full" onclick="openTrashModal()" style="margin-top: 24px;">🗑 Thùng rác</button>
                 <button class="btn btn-full" onclick="handleLogout()" style="margin-top: 12px;">Đăng Xuất</button>
             </div>
 
@@ -483,7 +400,6 @@
                     <div id="folderEntriesTable"></div>
                 </main>
 
-                <!-- EDITOR CHÍNH: KHUNG CỐ ĐỊNH, CHỈ CUỘN TRONG Ô TEXT -->
                 <main id="editorView" class="editor-section glass-panel" style="display: none;">
                     <button class="back-btn" onclick="closeEditor()" style="margin-bottom: 16px;">← Quay lại</button>
                     
@@ -493,7 +409,6 @@
                     </div>
                     
                     <div class="editor-container">
-                        <!-- Toolbar (Frozen) -->
                         <div id="editorToolbar" class="toolbar-horizontal" style="display: none;">
                             <button class="btn" onclick="insertTab()" title="Tab khoảng lùi">⇥ Thụt lề</button>
                             <button class="btn" onclick="formatText('bold')" title="In đậm"><b>B</b></button>
@@ -506,11 +421,9 @@
                             </label>
                         </div>
 
-                        <!-- Khung văn bản (Scrollable area) -->
                         <div class="editor-main-area">
                             <div id="diaryEditor" class="editor-box" contenteditable="false" placeholder="Bắt đầu viết ở đây..."></div>
                             
-                            <!-- Bảng điều khiển (Frozen ở đáy) -->
                             <div id="editorBottomBar" style="display: none;">
                                 <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
                                     <input type="datetime-local" id="entryDate" class="setting-input" style="width: auto; padding: 8px 12px; margin:0;">
@@ -528,7 +441,6 @@
         </div>
     </div>
 
-    <!-- MODAL THÙNG RÁC -->
     <div class="modal-overlay" id="trashModal">
         <div class="modal-content glass-panel">
             <div class="modal-header">
@@ -576,12 +488,10 @@
         let currentEditingId = null;
         let activeEntriesData = {}; 
 
-        // Khởi tạo các biến toàn cục (Đã xóa dòng khai báo trùng lặp)
         let allTabs = []; let allFolders = []; let currentTabId = null; let currentFolderViewId = null; 
 
-        // Lưu lại thời điểm bắt đầu load trang
         const loaderStartTime = Date.now();
-        const LOADER_ANIMATION_CYCLE = 3000; // 3 giây (3000ms) khớp với CSS
+        const LOADER_ANIMATION_CYCLE = 3000; 
         
         const emailInput = document.getElementById('auth-email');
         const passwordInput = document.getElementById('auth-password');
@@ -628,23 +538,17 @@
                 currentUser = user; 
                 document.getElementById('auth-screen').style.display = 'none'; 
                 document.getElementById('main-app').style.display = 'block'; 
-                await loadCoreData(); // Chờ tải xong toàn bộ dữ liệu người dùng
+                await loadCoreData(); 
             } else {
                 currentUser = null; 
                 document.getElementById('auth-screen').style.display = 'flex'; 
                 document.getElementById('main-app').style.display = 'none';
             }
             
-            // LOGIC XỬ LÝ ẨN MÀN HÌNH CHỜ
             const loader = document.getElementById('startup-loader');
             if (loader) {
-                // Tính thời gian đã trôi qua kể từ lúc mở app
                 const elapsed = Date.now() - loaderStartTime;
-                
-                // Tính thời gian còn lại để hoàn thành chu kỳ animation hiện tại
                 const remainingTime = LOADER_ANIMATION_CYCLE - (elapsed % LOADER_ANIMATION_CYCLE);
-                
-                // SetTimeout chờ đúng phần thời gian còn lại của chu kỳ rồi mới cho mờ đi
                 setTimeout(() => {
                     loader.style.opacity = '0'; 
                     setTimeout(() => loader.style.display = 'none', 500); 
@@ -652,7 +556,6 @@
             }
         });
 
-        // --- SETTINGS ---
         async function loadUserSettings() {
             try {
                 const docRef = doc(db, "user_settings", currentUser.uid);
@@ -663,12 +566,32 @@
         }
 
         function applySettingsToUI() {
-            if(currentSettings.bgUrl) { document.body.style.backgroundImage = `url('${currentSettings.bgUrl}')`; document.body.dataset.hasBg = "true"; } 
-            else { document.body.style.backgroundImage = "none"; document.body.dataset.hasBg = "false"; }
+            // ĐÃ SỬA: Load ảnh local từ máy tính trước
+            const localBg = localStorage.getItem('localBackground');
+            
+            if (localBg) {
+                document.body.style.backgroundImage = `url('${localBg}')`; 
+                document.body.dataset.hasBg = "true";
+            } else if(currentSettings.bgUrl) { 
+                document.body.style.backgroundImage = `url('${currentSettings.bgUrl}')`; 
+                document.body.dataset.hasBg = "true"; 
+            } else { 
+                document.body.style.backgroundImage = "none"; 
+                document.body.dataset.hasBg = "false"; 
+            }
+
             document.getElementById('settingBgUrl').value = currentSettings.bgUrl || "";
             
             document.getElementById('darkModeToggle').checked = currentSettings.isDark;
-            if (currentSettings.isDark) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+            
+            // ĐÃ SỬA: Thay đổi Dark Mode trên cả thẻ html để đồng bộ viền overscroll
+            if (currentSettings.isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+            }
 
             document.documentElement.style.setProperty('--editor-fs', (currentSettings.fontSize || "16") + 'px');
             document.getElementById('fontSizeSlider').value = currentSettings.fontSize || "16";
@@ -687,7 +610,15 @@
             renderImageHistory();
         }
 
-        window.toggleDarkMode = function(isDark) { if(isDark) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }
+        window.toggleDarkMode = function(isDark) { 
+            if(isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+            } 
+        }
         window.changeFontSize = function(size) { document.documentElement.style.setProperty('--editor-fs', size + 'px'); }
         window.changeAppTitle = function(title) { const displayTitle = title.trim() || "My Notebook"; document.title = displayTitle; document.querySelectorAll('.app-title-display').forEach(el => el.innerText = displayTitle); }
         window.changeTextColor = function(color) { document.documentElement.style.setProperty('--user-text-color', color); }
@@ -700,6 +631,7 @@
         }
 
         window.selectHistoryImage = function(url) {
+            localStorage.removeItem('localBackground'); // Ưu tiên chọn từ lịch sử
             document.getElementById('settingBgUrl').value = url; document.body.style.backgroundImage = `url('${url}')`; document.body.dataset.hasBg = "true"; showToast("Đã chọn ảnh từ lịch sử!");
         }
 
@@ -720,14 +652,17 @@
             const txtColor = document.getElementById('settingTextColor').value;
             const btnColor = document.getElementById('settingBtnColor').value;
             
-            if(bg) addImageUrlToHistory(bg);
+            if(bg) {
+                addImageUrlToHistory(bg);
+                localStorage.removeItem('localBackground'); // Nếu người dùng nhập URL mới, xóa ảnh local đi
+            }
+
             currentSettings = { ...currentSettings, bgUrl: bg, isDark: isDark, fontSize: fontSize, appTitle: title, textColor: txtColor, btnColor: btnColor };
             applySettingsToUI();
 
             try { await setDoc(doc(db, "user_settings", currentUser.uid), currentSettings, { merge: true }); showToast("Đã lưu Cài đặt Giao diện!"); } catch(e) { showToast("Lỗi khi lưu cài đặt!"); }
         }
 
-        // --- CORE DATA LOAD ---
         async function loadCoreData() {
             if (!currentUser) return;
             try {
@@ -760,7 +695,6 @@
             const folderListEl = document.getElementById('folderSettingsList'); const tabFolders = allFolders.filter(f => f.tabId === currentTabId); folderListEl.innerHTML = '';
             if (tabFolders.length === 0) folderListEl.innerHTML = '<div style="font-size:13px; color:var(--color-stone-gray); font-style:italic;">Chưa có thư mục</div>'; 
             tabFolders.forEach(f => {
-                // Chỉ dùng đúng 1 dòng này để hiển thị thư mục cùng 2 nút (Sửa + Xóa)
                 folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="editFolder('${f.id}')">✏️</button><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`;
             });
         }
@@ -770,7 +704,6 @@
             allTabs.forEach(tab => {
                 const isActive = tab.id === currentTabId; const btn = document.createElement('button');
                 btn.className = `btn ${isActive ? 'active-tab' : ''}`;
-                // Tab active thì opacity cao hơn
                 if(isActive) { btn.style.opacity = '1'; btn.style.boxShadow = 'inset 0 0 0 2px var(--user-text-color)'; } else { btn.style.opacity = '0.7'; }
                 btn.onclick = () => switchTab(tab.id); btn.innerText = tab.name; container.appendChild(btn);
             });
@@ -838,38 +771,24 @@
             } catch (error) { console.error("Lỗi:", error); }
         }
 
-        // --- CRUD CƠ BẢN TABS/FOLDERS ---
         window.createNewTab = async function() { const name = document.getElementById('newTabName').value.trim(); if(!name) return showToast("Vui lòng nhập tên Tab!"); await addDoc(tabsCollection, { userId: currentUser.uid, name: name, createdAt: new Date().toISOString() }); document.getElementById('newTabName').value = ""; showToast("Đã tạo Tab mới!"); await loadCoreData(); }
         window.editTab = async function(id) { const tab = allTabs.find(t => t.id === id); const newName = prompt("Nhập tên mới cho Tab:", tab.name); if(newName && newName.trim() !== "") { await updateDoc(doc(db, "notebook_tabs", id), { name: newName.trim() }); showToast("Đã đổi tên Tab!"); await loadCoreData(); } }
         window.deleteTab = async function(id) { if(allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!"); if(confirm(`Xác nhận xóa tab này?`)) { await deleteDoc(doc(db, "notebook_tabs", id)); if(currentTabId === id) currentTabId = allTabs.find(t => t.id !== id).id; showToast("Đã xóa Tab!"); await loadCoreData(); } }
         window.createNewFolder = async function() { const name = document.getElementById('newFolderName').value.trim(); const imageUrl = document.getElementById('newFolderImage').value.trim(); if(!name) return showToast("Vui lòng nhập tên Thư mục!"); const folderRef = await addDoc(foldersCollection, { userId: currentUser.uid, tabId: currentTabId, name: name, image: imageUrl, createdAt: new Date().toISOString() }); document.getElementById('newFolderName').value = ""; document.getElementById('newFolderImage').value = ""; showToast("Đã tạo Thư mục!"); await loadCoreData(); const selectEl = document.getElementById('folderSelect'); if(selectEl) selectEl.value = folderRef.id; }
         window.deleteFolder = async function(id) { if(confirm(`Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.`)) { await deleteDoc(doc(db, "notebook_folders", id)); showToast("Đã xóa Thư mục!"); if(currentFolderViewId === id) closeFolderView(); await loadCoreData(); } }
-        // --- CHỈNH SỬA THƯ MỤC ---
+        
         window.editFolder = async function(id) {
             const folder = allFolders.find(f => f.id === id);
             if (!folder) return;
-
             const newName = prompt("Nhập tên mới cho Thư mục:", folder.name);
-            if (newName === null) return; // Người dùng bấm Hủy (Cancel)
-
+            if (newName === null) return; 
             const newImage = prompt("Nhập link ảnh bìa mới (để trống nếu chỉ dùng màu nền):", folder.image || "");
-            if (newImage === null) return; // Người dùng bấm Hủy (Cancel)
+            if (newImage === null) return; 
 
             if (newName.trim() !== "") {
-                // Cập nhật lên Firebase
-                await updateDoc(doc(db, "notebook_folders", id), { 
-                    name: newName.trim(),
-                    image: newImage.trim() 
-                });
-                
+                await updateDoc(doc(db, "notebook_folders", id), { name: newName.trim(), image: newImage.trim() });
                 showToast("Đã cập nhật Thư mục!");
-                
-                // Nếu đang mở đúng thư mục đó thì cập nhật luôn tiêu đề đang hiển thị
-                if (currentFolderViewId === id) {
-                    document.getElementById('folderDetailTitle').innerText = newName.trim();
-                }
-                
-                // Tải lại dữ liệu để cập nhật UI
+                if (currentFolderViewId === id) { document.getElementById('folderDetailTitle').innerText = newName.trim(); }
                 await loadCoreData();
             } else {
                 showToast("Tên thư mục không được để trống!");
@@ -877,14 +796,13 @@
         }
         
         async function switchTab(tabId) { 
-            if (currentTabId === tabId) return; // Chặn render lại nếu tab đang mở
+            if (currentTabId === tabId) return; 
             currentTabId = tabId; 
             closeEditor(); closeFolderView(); 
             renderTabs(); renderFolderSelect(); renderSidebarSettings(); 
             await loadEntries(); 
         }
 
-        // --- ĐIỀU HƯỚNG ---
         window.openFolderView = function(folderId) {
             currentFolderViewId = folderId; const folder = allFolders.find(f => f.id === folderId); if(!folder) return;
             document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('editorView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'flex';
@@ -897,13 +815,9 @@
             document.getElementById('mainHeader').style.display = 'block'; document.getElementById('mainBlogView').style.display = 'flex';
         }
 
-        // =========================================================
-        // TRÌNH SOẠN THẢO (FROZEN/CHỈ ĐỌC)
-        // =========================================================
         function countWords(str) { return str.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length; }
         editor.addEventListener('input', () => { document.getElementById('liveWordCount').innerText = `${countWords(editor.innerHTML)} từ`; });
 
-        // Hàm thay đổi trạng thái Chỉ đọc / Chỉnh sửa
         window.enableEditMode = function(isEdit) {
             const titleInput = document.getElementById('entryTitle');
             const editorBox = document.getElementById('diaryEditor');
@@ -938,16 +852,15 @@
             document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'none'; 
             document.getElementById('editorView').style.display = 'flex';
             
-            document.body.classList.add('editor-open'); // Khóa cuộn trang ngoài
+            document.body.classList.add('editor-open'); 
             
-            // Viết bài mới -> tự động vào Mode Chỉnh Sửa
             enableEditMode(true);
             setTimeout(() => document.getElementById('entryTitle').focus(), 100);
         }
 
         window.closeEditor = function() {
             currentEditingId = null; document.getElementById('editorView').style.display = 'none';
-            document.body.classList.remove('editor-open'); // Mở khóa cuộn trang
+            document.body.classList.remove('editor-open'); 
             if (currentFolderViewId) {
                 openFolderView(currentFolderViewId); 
             } else { 
@@ -970,9 +883,7 @@
             document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'none'; 
             document.getElementById('editorView').style.display = 'flex';
             
-            document.body.classList.add('editor-open'); // Khóa cuộn
-
-            // Mở bài cũ -> Vào Mode Chỉ Đọc trước
+            document.body.classList.add('editor-open'); 
             enableEditMode(false);
         }
 
@@ -997,7 +908,6 @@
         window.insertTab = function() { document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'); editor.focus(); };
         editor.addEventListener('keydown', function(e) { if (e.key === 'Tab') { e.preventDefault(); insertTab(); } });
 
-        // --- TIỆN ÍCH KHÁC ---
         function showToast(message) { const toast = document.getElementById('toast'); toast.textContent = message; toast.className = "show"; setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000); }
         function formatDate(dateString) { if(!dateString) return ""; return new Date(dateString).toLocaleDateString('vi-VN', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
         
@@ -1008,7 +918,6 @@
             if (sidebar.classList.contains('open') && !sidebar.contains(event.target) && !openBtn.contains(event.target)) sidebar.classList.remove('open');
         });
 
-        // --- THÙNG RÁC ---
         window.moveToTrash = async function(docId) {
             if(confirm("Chuyển bài viết này vào Thùng rác?")) { await updateDoc(doc(db, "diaries", docId), { status: 'trash' }); showToast("Đã chuyển vào thùng rác!"); if(currentEditingId === docId) closeEditor(); loadEntries(); }
         }
@@ -1028,6 +937,56 @@
         }
         window.restoreFromTrash = async function(docId) { await updateDoc(doc(db, "diaries", docId), { status: 'active' }); showToast("Đã khôi phục bài viết!"); loadEntries(); setTimeout(renderTrashItems, 500); }
         window.hardDelete = async function(docId) { if(confirm("CẢNH BÁO: Bài viết sẽ bị xóa vĩnh viễn. Tiếp tục?")) { await deleteDoc(doc(db, "diaries", docId)); showToast("Đã xóa vĩnh viễn!"); loadEntries(); setTimeout(renderTrashItems, 500); } }
+
+        // ĐÃ SỬA: Logic Upload & Cắt ảnh nội bộ bằng Canvas
+        document.getElementById('localBgUploader').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+
+                    const imgRatio = img.width / img.height;
+                    const canvasRatio = canvas.width / canvas.height;
+                    let drawWidth, drawHeight, offsetX, offsetY;
+
+                    if (imgRatio > canvasRatio) {
+                        drawHeight = canvas.height;
+                        drawWidth = img.height * imgRatio;
+                        offsetX = (canvas.width - drawWidth) / 2;
+                        offsetY = 0;
+                    } else {
+                        drawWidth = canvas.width;
+                        drawHeight = img.width / imgRatio;
+                        offsetX = 0;
+                        offsetY = (canvas.height - drawHeight) / 2;
+                    }
+
+                    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+                    const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+                    document.body.style.backgroundImage = `url('${base64Image}')`;
+                    document.body.dataset.hasBg = "true";
+                    
+                    localStorage.setItem('localBackground', base64Image);
+                    document.getElementById('settingBgUrl').value = ''; // Clear URL khi dùng ảnh local
+                    
+                    showToast("Đã cắt và áp dụng ảnh nền thành công!");
+                    document.getElementById('localBgUploader').value = ''; 
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
     </script>
 </body>
 </html>
