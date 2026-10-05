@@ -748,7 +748,6 @@
             } catch (error) { console.error("Lỗi:", error); showToast("Có lỗi khi tải dữ liệu!"); }
         }
 
-        // --- RENDERING VIEWS ---
         function renderSidebarSettings() {
             const tabListEl = document.getElementById('tabSettingsList'); tabListEl.innerHTML = '';
             allTabs.forEach(tab => {
@@ -757,8 +756,7 @@
             const folderListEl = document.getElementById('folderSettingsList'); const tabFolders = allFolders.filter(f => f.tabId === currentTabId); folderListEl.innerHTML = '';
             if (tabFolders.length === 0) folderListEl.innerHTML = '<div style="font-size:13px; color:var(--color-stone-gray); font-style:italic;">Chưa có thư mục</div>'; 
             tabFolders.forEach(f => {
-                folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`;
-            // ĐÃ THÊM NÚT EDIT BÊN DƯỚI DÒNG NÀY:
+                // Chỉ dùng đúng 1 dòng này để hiển thị thư mục cùng 2 nút (Sửa + Xóa)
                 folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="editFolder('${f.id}')">✏️</button><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`;
             });
         }
