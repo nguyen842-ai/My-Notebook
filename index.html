@@ -44,7 +44,8 @@
             margin: 0; padding: 0; line-height: 1.6; height: 100vh; overflow: hidden; 
             -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
             background-color: var(--color-warm-parchment);
-            background-size: cover; background-position: center center; background-attachment: fixed;
+            background-size: cover; background-position: center center;
+            /* Đã xóa background-attachment: fixed; để sửa lỗi iOS */
         }
 
         .bg-overlay {
@@ -337,11 +338,14 @@
             /* Ép thẻ thư mục hiển thị 2 cột trên 1 dòng */
             .folder-grid { gap: 16px; margin-bottom: 32px; }
             .folder-box {
-                width: calc(50% - 8px); /* Chia đôi màn hình trừ đi một nửa khoảng cách gap */
-                min-width: unset; /* Gỡ giới hạn chống rớt dòng */
+                /* Giữ nguyên các thông số cũ của bạn */
+                width: calc(50% - 8px); 
+                min-width: unset; 
                 min-height: 120px;
                 padding: 16px;
                 box-sizing: border-box;
+                /* Chỉnh lại cách hiển thị ảnh cho mượt trên iPhone */
+                background-position: top center; /* Giữ lại phần quan trọng ở trên cùng */
             }
             .folder-name { font-size: 16px; }
         }
