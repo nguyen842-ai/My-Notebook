@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>My Notebook</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -137,22 +137,27 @@ body.editor-open .main-content{overflow:hidden}
 
 #cropModal{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .crop-header{color:#fff;margin-bottom:20px;font-size:18px;font-weight:500;text-align:center}
-.crop-container{width:100%;max-width:600px;height:60vh;background:#222;border-radius:8px;overflow:hidden}
+.crop-container{width:100%;max-width:600px;height:60vh;background:#222;border-radius:8px;overflow:hidden;touch-action:none}
 .crop-actions{margin-top:24px;display:flex;gap:16px;width:100%;max-width:600px}
 .crop-img{max-width:100%;display:block}
 
 /* ---------- CSS Kéo thả (Drag & Drop) ---------- */
+.btn[data-type="tab"], tr[data-type="entry"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 .drag-over.folder-box { transform:scale(1.02); box-shadow:0 0 0 3px #fff, 0 12px 24px rgba(0,0,0,.3); filter:brightness(1.15) }
 .drag-over.btn[data-type="tab"] { opacity: 1; transform: translateY(-2px); box-shadow:inset 0 0 0 2px var(--user-text-color), 0 4px 12px rgba(0,0,0,.1) }
 tr[data-type="entry"] { cursor: grab }
 tr[data-type="entry"]:active { cursor: grabbing }
 
 /* Cho container giữ đúng chiều cao nội dung để vùng cuộn tính đủ độ dài (trừ lúc đang mở editor) */
-.main-content{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+.main-content{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none}
 body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 @media (max-width:768px){
   .container{margin-bottom:32px}
-  .main-content{padding:calc(max(env(safe-area-inset-top),24px) + 16px) max(env(safe-area-inset-right),16px) max(env(safe-area-inset-bottom),24px) max(env(safe-area-inset-left),16px)}
+  .main-content{padding:calc(max(env(safe-area-inset-top),24px) + 16px) max(env(safe-area-inset-right),16px) calc(max(env(safe-area-inset-bottom),24px) + 80px) max(env(safe-area-inset-left),16px)}
   #openMenuBtn{top:calc(max(env(safe-area-inset-top),24px) + 16px);right:16px;width:44px;height:44px}
   .diary-title{font-size:32px;margin:0 0 24px;min-height:44px;display:flex;align-items:center;padding-right:56px}
   .editor-section{padding:24px 20px}
@@ -471,21 +476,6 @@ async function loadCoreData() {
     allTabs.push({ id: r.id, name: "Chung", createdAt, order: 0 }); 
   }
   
-  // Gán tabId cố định cho các bài cũ chưa có tabId (tránh nhảy tab khi đổi thứ tự Tabs)
-  const orphans = entriesCache.filter(e => !e.tabId);
-  if (orphans.length) {
-    try {
-      for (let i = 0; i < orphans.length; i += 400) {
-        const b = writeBatch(db);
-        orphans.slice(i, i + 400).forEach(e => {
-          b.update(doc(db, "diaries", e.id), { tabId: allTabs[0].id });
-        });
-        await b.commit();
-        orphans.slice(i, i + 400).forEach(e => { e.tabId = allTabs[0].id; });
-      }
-    } catch (err) { console.error("Lỗi gán tabId cho bài cũ", err); }
-  }
-  
   // LUÔN LẤY TAB ĐẦU TIÊN LÀM TAB CHÍNH KHI LOAD
   currentTabId = allTabs[0].id;
   
@@ -624,7 +614,7 @@ function closeEditor() {
 function editEntry(id) {
   const e = entriesCache.find(x => x.id === id); if (!e) return;
   $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content);
-  $('folderSelect').value = e.folderId || ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
+  $('folderSelect').value = e.folderId \vert{}\vert{} ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
   $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu";
   showEditor(); setEditMode(false);
 }
@@ -677,14 +667,10 @@ function loadCropper() {
     document.head.append(css, js);
   });
 }
-$('localBgUploader').addEventListener('change', guard(async e => {
-  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
-  await loadCropper();
-  const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
-  $('sidebar').classList.remove('open');
+$('localBgUploader').addEventListener('change', guard(async e => {   const file = e.target.files[0]; e.target.value = ''; if (!file) return;   await loadCropper();   const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });$('sidebar').classList.remove('open');
   const img = $('imageToCrop'); img.src = src; $('cropModal').style.display = 'flex';
   cropper?.destroy();
-  cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false });
+  cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false, zoomable: true, zoomOnTouch: true });
 }, "Không tải được công cụ cắt ảnh!"));
 function closeCrop() { $('cropModal').style.display = 'none'; cropper?.destroy(); cropper = null; }
 const applyCrop = guard(async () => {
@@ -699,21 +685,33 @@ const applyCrop = guard(async () => {
 let draggedItem = null;
 
 document.addEventListener('dragstart', e => {
-  const el = e.target.closest?.('[data-type="tab"], [data-type="entry"]');
-  if (!el) return;
-  draggedItem = { type: el.dataset.type, id: el.dataset.id, el };
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', el.dataset.id); // Firefox yêu cầu setData mới cho kéo
+  const tab = e.target.closest('[data-type="tab"]');
+  if (tab) { draggedItem = { type: 'tab', id: tab.dataset.id, el: tab }; e.dataTransfer.effectAllowed = 'move'; }
+  const entry = e.target.closest('[data-type="entry"]');
+  if (entry) { draggedItem = { type: 'entry', id: entry.dataset.id, el: entry }; e.dataTransfer.effectAllowed = 'move'; }
 });
 
 document.addEventListener('dragover', e => {
   if (!draggedItem) return;
   e.preventDefault(); // Cho phép drop
-  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-  const target = draggedItem.type === 'tab'
-    ? e.target.closest('[data-type="tab"]')
-    : e.target.closest('.folder-box, [data-type="tab"]');
-  if (target && target !== draggedItem.el) target.classList.add('drag-over');
+  
+  // Highlight UI nơi sắp được thả
+  if (draggedItem.type === 'tab') {
+    const dropTab = e.target.closest('[data-type="tab"]');
+    if (dropTab && dropTab !== draggedItem.el) dropTab.classList.add('drag-over');
+  }
+  if (draggedItem.type === 'entry') {
+    const folder = e.target.closest('.folder-box');
+    if (folder) folder.classList.add('drag-over');
+    const dropTab = e.target.closest('[data-type="tab"]');
+    if (dropTab) dropTab.classList.add('drag-over');
+  }
+});
+
+document.addEventListener('dragleave', e => {
+  if (!draggedItem) return;
+  const el = e.target.closest('.drag-over');
+  if (el) el.classList.remove('drag-over');
 });
 
 document.addEventListener('drop', async e => {
@@ -734,11 +732,10 @@ document.addEventListener('drop', async e => {
       allTabs.splice(dropIdx, 0, removed);
 
       renderTabs(); // Cập nhật UI ngay lập tức
-      renderSidebarSettings();
       const batch = writeBatch(db);
       allTabs.forEach((t, i) => { t.order = i; batch.update(doc(db, "notebook_tabs", t.id), { order: i }); });
-      try { await batch.commit(); showToast("Đã cập nhật thứ tự Tab!"); }
-      catch (err) { console.error(err); showToast("Lỗi lưu thứ tự Tab!"); }
+      await batch.commit();
+      showToast("Đã cập nhật thứ tự Tab!");
     }
   }
 
