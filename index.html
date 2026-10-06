@@ -141,7 +141,11 @@ body.editor-open .main-content{overflow:hidden}
 .crop-actions{margin-top:24px;display:flex;gap:16px;width:100%;max-width:600px}
 .crop-img{max-width:100%;display:block}
 
+/* Cho container giữ đúng chiều cao nội dung để vùng cuộn tính đủ độ dài (trừ lúc đang mở editor) */
+.main-content{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 @media (max-width:768px){
+  .container{margin-bottom:32px}
   .main-content{padding:calc(max(env(safe-area-inset-top),24px) + 16px) max(env(safe-area-inset-right),16px) max(env(safe-area-inset-bottom),24px) max(env(safe-area-inset-left),16px)}
   #openMenuBtn{top:calc(max(env(safe-area-inset-top),24px) + 16px);right:16px;width:44px;height:44px}
   .diary-title{font-size:32px;margin:0 0 24px;min-height:44px;display:flex;align-items:center;padding-right:56px}
