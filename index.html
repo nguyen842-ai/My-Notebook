@@ -1,8 +1,3 @@
-Chào bạn, đây là bản cập nhật mã nguồn theo đúng các yêu cầu của bạn:
- * Lấy Tab đầu tiên làm Tab chính: Khi người dùng đăng nhập vào hoặc tải lại trang, hệ thống sẽ tự động chọn Tab đầu tiên (theo thứ tự sắp xếp) làm tab mặc định.
- * Kéo thả Tabs: Bạn có thể giữ chuột vào một Tab trên thanh điều hướng để kéo nó sang vị trí mới, hệ thống sẽ tự động lưu lại thứ tự hiển thị của Tabs.
- * Kéo thả Files (Di chuyển bài viết): Trên danh sách bảng, bạn có thể kéo thả một bài viết (file) và thả vào thẻ Thư mục để di chuyển file vào thư mục đó, hoặc thả vào một Tab khác trên thanh công cụ để chuyển bài viết đó sang Tab khác một cách nhanh chóng nhất.
-Dưới đây là toàn bộ mã nguồn đã được nâng cấp, bạn chỉ cần ghi đè vào file index.html của bạn:
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -476,6 +471,21 @@ async function loadCoreData() {
     allTabs.push({ id: r.id, name: "Chung", createdAt, order: 0 }); 
   }
   
+  // Gán tabId cố định cho các bài cũ chưa có tabId (tránh nhảy tab khi đổi thứ tự Tabs)
+  const orphans = entriesCache.filter(e => !e.tabId);
+  if (orphans.length) {
+    try {
+      for (let i = 0; i < orphans.length; i += 400) {
+        const b = writeBatch(db);
+        orphans.slice(i, i + 400).forEach(e => {
+          b.update(doc(db, "diaries", e.id), { tabId: allTabs[0].id });
+        });
+        await b.commit();
+        orphans.slice(i, i + 400).forEach(e => { e.tabId = allTabs[0].id; });
+      }
+    } catch (err) { console.error("Lỗi gán tabId cho bài cũ", err); }
+  }
+  
   // LUÔN LẤY TAB ĐẦU TIÊN LÀM TAB CHÍNH KHI LOAD
   currentTabId = allTabs[0].id;
   
@@ -614,7 +624,7 @@ function closeEditor() {
 function editEntry(id) {
   const e = entriesCache.find(x => x.id === id); if (!e) return;
   $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content);
-  $('folderSelect').value = e.folderId \vert{}\vert{} ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
+  $('folderSelect').value = e.folderId || ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
   $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu";
   showEditor(); setEditMode(false);
 }
@@ -667,7 +677,11 @@ function loadCropper() {
     document.head.append(css, js);
   });
 }
-$('localBgUploader').addEventListener('change', guard(async e => {   const file = e.target.files[0]; e.target.value = ''; if (!file) return;   await loadCropper();   const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });$('sidebar').classList.remove('open');
+$('localBgUploader').addEventListener('change', guard(async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  await loadCropper();
+  const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  $('sidebar').classList.remove('open');
   const img = $('imageToCrop'); img.src = src; $('cropModal').style.display = 'flex';
   cropper?.destroy();
   cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false });
@@ -685,33 +699,21 @@ const applyCrop = guard(async () => {
 let draggedItem = null;
 
 document.addEventListener('dragstart', e => {
-  const tab = e.target.closest('[data-type="tab"]');
-  if (tab) { draggedItem = { type: 'tab', id: tab.dataset.id, el: tab }; e.dataTransfer.effectAllowed = 'move'; }
-  const entry = e.target.closest('[data-type="entry"]');
-  if (entry) { draggedItem = { type: 'entry', id: entry.dataset.id, el: entry }; e.dataTransfer.effectAllowed = 'move'; }
+  const el = e.target.closest?.('[data-type="tab"], [data-type="entry"]');
+  if (!el) return;
+  draggedItem = { type: el.dataset.type, id: el.dataset.id, el };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', el.dataset.id); // Firefox yêu cầu setData mới cho kéo
 });
 
 document.addEventListener('dragover', e => {
   if (!draggedItem) return;
   e.preventDefault(); // Cho phép drop
-  
-  // Highlight UI nơi sắp được thả
-  if (draggedItem.type === 'tab') {
-    const dropTab = e.target.closest('[data-type="tab"]');
-    if (dropTab && dropTab !== draggedItem.el) dropTab.classList.add('drag-over');
-  }
-  if (draggedItem.type === 'entry') {
-    const folder = e.target.closest('.folder-box');
-    if (folder) folder.classList.add('drag-over');
-    const dropTab = e.target.closest('[data-type="tab"]');
-    if (dropTab) dropTab.classList.add('drag-over');
-  }
-});
-
-document.addEventListener('dragleave', e => {
-  if (!draggedItem) return;
-  const el = e.target.closest('.drag-over');
-  if (el) el.classList.remove('drag-over');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const target = draggedItem.type === 'tab'
+    ? e.target.closest('[data-type="tab"]')
+    : e.target.closest('.folder-box, [data-type="tab"]');
+  if (target && target !== draggedItem.el) target.classList.add('drag-over');
 });
 
 document.addEventListener('drop', async e => {
@@ -732,10 +734,11 @@ document.addEventListener('drop', async e => {
       allTabs.splice(dropIdx, 0, removed);
 
       renderTabs(); // Cập nhật UI ngay lập tức
+      renderSidebarSettings();
       const batch = writeBatch(db);
       allTabs.forEach((t, i) => { t.order = i; batch.update(doc(db, "notebook_tabs", t.id), { order: i }); });
-      await batch.commit();
-      showToast("Đã cập nhật thứ tự Tab!");
+      try { await batch.commit(); showToast("Đã cập nhật thứ tự Tab!"); }
+      catch (err) { console.error(err); showToast("Lỗi lưu thứ tự Tab!"); }
     }
   }
 
