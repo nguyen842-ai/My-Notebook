@@ -1,7 +1,3 @@
-Lỗi treo ở màn hình loading (không tắt được biểu tượng tải) thường xảy ra do một trong hai nguyên nhân sau trong quá trình sao chép mã:
- * Lỗi cú pháp do dán mã (Copy-paste truncation): Một số dòng JavaScript ở bản trước được viết khá liền mạch. Khi sao chép vào trình duyệt hoặc Text Editor, đôi khi bị ngắt dòng sai hoặc vô tình biến thành dòng chú thích (comment), làm toàn bộ script bị lỗi và dừng chạy trước khi tắt màn hình loading.
- * Firebase Firestore bị kẹt khởi tạo: Nếu bạn đang mở bằng file trực tiếp (file://) hoặc cache trình duyệt xung đột, quá trình khởi tạo cơ sở dữ liệu có thể văng lỗi, khiến trình theo dõi trạng thái đăng nhập không bao giờ được kích hoạt.
-Để xử lý dứt điểm, mình đã dàn trang lại toàn bộ phần JavaScript cho rõ ràng, dễ copy hơn và thêm cơ chế tự động thoát màn hình loading / chống treo Firebase. Bạn hãy chép toàn bộ mã nguồn dưới đây và ghi đè lại file index.html của bạn:
 <!DOCTYPE html>
 <html lang="vi">
 <head>
