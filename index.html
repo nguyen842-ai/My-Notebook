@@ -1,741 +1,680 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>My Notebook</title>
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="My Notebook">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>My Notebook</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Notebook">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- FONT CHỮ -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- THƯ VIỆN CROPER.JS ĐỂ CẮT ẢNH THỦ CÔNG -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" defer></script>
 
-    <style>
-        :root {
-            --color-warm-parchment: #f2f0eb;
-            --color-paper-white-rgb: 255, 255, 255;   
-            --color-soft-mist: rgba(150, 150, 150, 0.3);     
-            --color-stone-gray: #666666;    
-            --font-super: 'Inter', sans-serif;
-            --editor-fs: 16px; 
-            --user-text-color: #292827;
-            --user-btn-color: #421d24;
-            --hover-bg: rgba(150, 150, 150, 0.1);
-        }
+<style>
+:root{
+  --color-warm-parchment:#f2f0eb; --color-paper-white-rgb:255,255,255;
+  --color-soft-mist:rgba(150,150,150,.3); --color-stone-gray:#666;
+  --font-super:'Inter',system-ui,sans-serif; --editor-fs:16px;
+  --user-text-color:#292827; --user-btn-color:#421d24; --hover-bg:rgba(150,150,150,.1);
+}
+html,body{overscroll-behavior-y:none;background-color:var(--color-warm-parchment)}
+*{touch-action:manipulation}
+html.dark-mode,body.dark-mode{--color-warm-parchment:#18181a;--color-paper-white-rgb:36,36,38;--color-stone-gray:#9e9e9e;background-color:#18181a}
+body{font-family:var(--font-super);color:var(--user-text-color);margin:0;padding:0;line-height:1.6;height:100vh;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;background-size:cover;background-position:center}
+.bg-overlay{position:fixed;inset:0;background:var(--color-warm-parchment);z-index:-1;pointer-events:none;transition:opacity .3s;opacity:0}
+body[data-has-bg="true"] .bg-overlay{opacity:.25}
+body.dark-mode[data-has-bg="true"] .bg-overlay{background:#121212}
 
-        html, body { overscroll-behavior-y: none; background-color: var(--color-warm-parchment); }
-        * { touch-action: manipulation; }
+/* Blur chỉ dùng cho sidebar / modal / editor / auth; phần còn lại dùng nền bán trong suốt */
+.glass-panel{background-color:rgba(var(--color-paper-white-rgb),.55);border:1px solid var(--color-soft-mist)}
+.blur{background-color:rgba(var(--color-paper-white-rgb),.4);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 
-        html.dark-mode, body.dark-mode {
-            --color-warm-parchment: #18181a;
-            --color-paper-white-rgb: 36, 36, 38;
-            --color-stone-gray: #9e9e9e;
-            background-color: #18181a;
-        }
+#startup-loader{position:fixed;inset:0;background:var(--color-warm-parchment);z-index:100000;display:flex;justify-content:center;align-items:center;transition:opacity .4s}
+.loader-container{position:relative;width:160px;height:100px}
+.loader{position:absolute;top:50%;left:50%;z-index:10;width:160px;height:100px;margin:-50px 0 0 -80px;border-radius:5px;background:#1e3f57;animation:dot1_ 3s cubic-bezier(.55,.3,.24,.99) infinite}
+.loader:nth-child(2){z-index:11;width:150px;height:90px;margin:-45px 0 0 -75px;border-radius:3px;background:#3c517d;animation-name:dot2_}
+.loader:nth-child(3){z-index:12;width:40px;height:20px;margin:50px 0 0 -20px;border-radius:0 0 5px 5px;background:#6bb2cd;animation-name:dot3_}
+@keyframes dot1_{3%,97%{width:160px;height:100px;margin-top:-50px;margin-left:-80px}30%,36%{width:80px;height:120px;margin-top:-60px;margin-left:-40px}63%,69%{width:40px;height:80px;margin-top:-40px;margin-left:-20px}}
+@keyframes dot2_{3%,97%{height:90px;width:150px;margin-left:-75px;margin-top:-45px}30%,36%{width:70px;height:96px;margin-left:-35px;margin-top:-48px}63%,69%{width:32px;height:60px;margin-left:-16px;margin-top:-30px}}
+@keyframes dot3_{3%,97%{height:20px;width:40px;margin-left:-20px;margin-top:50px}30%,36%{width:8px;height:8px;margin-left:-5px;margin-top:49px;border-radius:8px}63%,69%{width:16px;height:4px;margin-left:-8px;margin-top:-37px;border-radius:10px}}
 
-        body { 
-            font-family: var(--font-super); color: var(--user-text-color); 
-            margin: 0; padding: 0; line-height: 1.6; height: 100vh; overflow: hidden; 
-            -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-            background-size: cover; background-position: center center;
-        }
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:8px;outline:none;border:none!important;font-family:var(--font-super);font-size:14px;font-weight:500;cursor:pointer;transition:.2s;background-color:var(--user-btn-color)!important;color:var(--user-text-color)!important}
+.btn:hover{filter:brightness(1.15);box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-1px)}
+.btn:active{transform:scale(.98)}
+.btn-full{width:100%;margin-top:8px}
+.icon-btn{background:transparent;border:none;cursor:pointer;color:var(--user-text-color);font-size:16px;opacity:.6;transition:.2s;padding:4px}
+.icon-btn:hover{opacity:1;transform:scale(1.1)}
 
-        .bg-overlay { position: fixed; inset: 0; background: var(--color-warm-parchment); z-index: -1; pointer-events: none; transition: background 0.3s ease, opacity 0.3s ease; opacity: 0; }
-        body[data-has-bg="true"] .bg-overlay { opacity: 0.25; }
-        body.dark-mode[data-has-bg="true"] .bg-overlay { background: #121212; opacity: 0.25; }
+#auth-screen{position:absolute;inset:0;z-index:9999;display:none;flex-direction:column;justify-content:center;align-items:center}
+.auth-container{width:100%;max-width:400px;padding:48px 40px;display:flex;flex-direction:column;align-items:center;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.05);box-sizing:border-box}
+.auth-container h1{font-weight:500;font-size:28px;margin:0 0 32px;text-align:center}
+.input{width:100%;height:48px;margin-bottom:16px;border-radius:8px;border:1px solid var(--color-soft-mist);background-color:rgba(var(--color-paper-white-rgb),.5);font-size:16px;color:var(--user-text-color);padding:0 16px;outline:none;font-family:var(--font-super);box-sizing:border-box;transition:.2s}
+.input:focus,.setting-input:focus{border-color:var(--user-btn-color);box-shadow:0 0 0 2px rgba(0,0,0,.1)}
+.auth-switch,.auth-forgot{font-size:14px;color:var(--user-text-color);cursor:pointer;background:none;border:none;margin-bottom:8px;font-weight:500}
+.auth-switch:hover,.auth-forgot:hover{text-decoration:underline}
+.auth-msg{margin-top:16px;font-size:14px;display:none}
+.auth-msg.error{color:#d9534f}
 
-        .glass-panel { background-color: rgba(var(--color-paper-white-rgb), 0.35); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--color-soft-mist); }
+#main-app{display:none;width:100%;height:100vh;height:100dvh;position:relative}
+.main-content{height:100%;overflow-y:auto;display:flex;flex-direction:column;padding:0 40px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+main{animation:fadeIn .3s cubic-bezier(.2,.8,.2,1) forwards}
+body.editor-open .main-content{overflow:hidden}
+.container{width:100%;max-width:1000px;margin:64px auto;display:flex;flex-direction:column;flex-grow:1;min-height:0}
+.diary-title{font-size:48px;font-weight:500;margin:0 0 48px;letter-spacing:-1px;flex-shrink:0}
 
-        #startup-loader { position: fixed; inset: 0; background: var(--color-warm-parchment); z-index: 100000; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
-        .loader-container { position: relative; width: 160px; height: 100px; }
-        .loader { position: absolute; top: 50%; left: 50%; z-index: 10; width: 160px; height: 100px; margin-left: -80px; margin-top: -50px; border-radius: 5px; background: #1e3f57; animation: dot1_ 3s cubic-bezier(0.55,0.3,0.24,0.99) infinite; }
-        .loader:nth-child(2) { z-index: 11; width: 150px; height: 90px; margin-top: -45px; margin-left: -75px; border-radius: 3px; background: #3c517d; animation-name: dot2_; }
-        .loader:nth-child(3) { z-index: 12; width: 40px; height: 20px; margin-top: 50px; margin-left: -20px; border-radius: 0 0 5px 5px; background: #6bb2cd; animation-name: dot3_; }
+#openMenuBtn{position:fixed;top:24px;right:24px;z-index:900;border-radius:50%;width:48px;height:48px;font-size:20px;padding:0;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 
-        @keyframes dot1_ { 3%,97% { width: 160px; height: 100px; margin-top: -50px; margin-left: -80px; } 30%,36% { width: 80px; height: 120px; margin-top: -60px; margin-left: -40px; } 63%,69% { width: 40px; height: 80px; margin-top: -40px; margin-left: -20px; } }
-        @keyframes dot2_ { 3%,97% { height: 90px; width: 150px; margin-left: -75px; margin-top: -45px; } 30%,36% { width: 70px; height: 96px; margin-left: -35px; margin-top: -48px; } 63%,69% { width: 32px; height: 60px; margin-left: -16px; margin-top: -30px; } }
-        @keyframes dot3_ { 3%,97% { height: 20px; width: 40px; margin-left: -20px; margin-top: 50px; } 30%,36% { width: 8px; height: 8px; margin-left: -5px; margin-top: 49px; border-radius: 8px; } 63%,69% { width: 16px; height: 4px; margin-left: -8px; margin-top: -37px; border-radius: 10px; } }
+/* Sidebar trượt bằng transform (chạy trên compositor) */
+.sidebar{width:340px;height:100vh;height:100dvh;overflow-y:auto;position:fixed;right:0;top:0;transform:translateX(105%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:1000;display:flex;flex-direction:column;will-change:transform;background-color:rgba(var(--color-paper-white-rgb),.8)}
+.sidebar.open{transform:none}
+.sidebar-header{padding:24px;font-weight:500;font-size:19px;border-bottom:1px solid var(--color-soft-mist);display:flex;justify-content:space-between;align-items:center}
+.sidebar-box{padding:24px;border-bottom:1px solid var(--color-soft-mist)}
+.setting-input{padding:10px 12px;font-family:var(--font-super);font-size:14px;width:100%;box-sizing:border-box;border:1px solid var(--color-soft-mist);background:rgba(var(--color-paper-white-rgb),.5);color:var(--user-text-color);border-radius:8px;margin-top:8px;outline:none}
+.setting-item{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:12px}
+.history-grid-container{display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:5px}
+.history-img-box{width:40px;height:40px;flex-shrink:0;border-radius:8px;border:1px solid var(--color-soft-mist);background-size:cover;background-position:center;cursor:pointer;transition:transform .2s}
+.history-img-box:hover{transform:scale(1.1)}
+.menu-accordion{border:1px solid var(--color-soft-mist);border-radius:8px;overflow:hidden;margin-top:16px;font-size:14px}
+.menu-accordion summary{padding:12px 16px;font-weight:500;cursor:pointer;outline:none;list-style:none;display:flex;align-items:center;justify-content:space-between}
+.menu-accordion summary::-webkit-details-marker{display:none}
+.accordion-content{padding:16px;background:rgba(0,0,0,.03);border-top:1px solid var(--color-soft-mist)}
+.list-item-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:8px 12px;border:1px solid var(--color-soft-mist);font-size:14px;border-radius:8px}
+.list-item-row span{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.history-list{list-style:none;padding:0;margin:0}
+.history-item a{text-decoration:none;color:var(--user-text-color);display:block;padding:8px 12px;border-radius:8px;transition:.2s}
+.history-item a:hover{background-color:var(--hover-bg)}
+.history-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-date{font-size:12px;color:var(--color-stone-gray)}
 
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; border-radius: 8px; outline: none; border: none !important; font-family: var(--font-super); font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; text-decoration: none; background-color: var(--user-btn-color) !important; color: var(--user-text-color) !important; opacity: 1 !important; }
-        .btn:hover { filter: brightness(1.15); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
-        .btn:active { transform: scale(0.98); }
-        .btn-full { width: 100%; margin-top: 8px; }
-        .icon-btn { background: transparent; border: none; cursor: pointer; color: var(--user-text-color); font-size: 16px; opacity: 0.6; transition: 0.2s; padding: 4px; }
-        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+.tabs-container{display:flex;gap:8px;margin-bottom:48px;padding:8px;border-radius:8px;width:fit-content;flex-wrap:wrap}
+.tabs-container .btn{padding:8px 24px;border-radius:6px;opacity:.7}
+.tabs-container .btn.active-tab{opacity:1;box-shadow:inset 0 0 0 2px var(--user-text-color)}
+.folder-grid{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:48px}
+.folder-box{position:relative;overflow:hidden;width:calc(25% - 24px);min-width:160px;min-height:140px;border-radius:16px;border:1px solid var(--color-soft-mist);cursor:pointer;transition:.2s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background-size:cover;background-position:center;background-color:var(--user-btn-color)}
+.folder-box:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.1)}
+.folder-box::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),transparent 80%);pointer-events:none}
+.folder-name{position:relative;z-index:2;font-size:18px;font-weight:600;color:#fff;line-height:1.3;text-shadow:1px 1px 4px rgba(0,0,0,.9)}
+.entry-table{width:100%;border-collapse:collapse;border-radius:16px;overflow:hidden}
+.entry-table th{text-align:left;padding:16px 24px;border-bottom:1px solid var(--color-soft-mist);font-size:13px;color:var(--color-stone-gray);font-weight:500}
+.entry-table td{padding:16px 24px;border-bottom:1px solid var(--color-soft-mist);font-size:15px}
+.entry-table tr:last-child td{border-bottom:none}
+.entry-table tr:hover td{background:var(--hover-bg);cursor:pointer}
+.back-btn{font-size:14px;font-weight:500;color:var(--user-text-color);cursor:pointer;background:none;border:none;padding:0;margin-bottom:32px;display:inline-flex;gap:8px;opacity:.8;align-self:flex-start}
+.back-btn:hover{text-decoration:underline;opacity:1}
 
-        #auth-screen { position: absolute; inset: 0; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
-        .auth-container { width: 100%; max-width: 400px; padding: 48px 40px; display: flex; flex-direction: column; align-items: center; border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.05); }
-        .auth-container h1 { font-weight: 500; font-size: 28px; margin-bottom: 32px; color: var(--user-text-color); text-align: center; }
-        .input { width: 100%; height: 48px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--color-soft-mist); background-color: rgba(var(--color-paper-white-rgb), 0.5); font-size: 16px; color: var(--user-text-color); padding: 0 16px; outline: none; font-family: var(--font-super); box-sizing: border-box; transition: 0.2s; }
-        .input:focus { border-color: var(--user-btn-color); box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
-        .auth-switch, .auth-forgot { font-size: 14px; color: var(--user-text-color); cursor: pointer; background: none; border: none; margin-bottom: 8px; font-weight: 500;}
-        .auth-switch:hover, .auth-forgot:hover { text-decoration: underline; }
-        .auth-msg { margin-top: 16px; font-size: 14px; display: none; }
-        .auth-msg.error { color: #d9534f; } .auth-msg.success { color: var(--user-text-color); }
+.editor-section{border-radius:16px;padding:32px 40px;margin-bottom:24px;display:flex;flex-direction:column;flex-grow:1;min-height:0}
+.editor-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px;border-bottom:1px solid var(--color-soft-mist);padding-bottom:16px}
+.input-title{flex-grow:1;border:none;font-size:36px;font-weight:600;background:transparent;color:var(--user-text-color);outline:none;font-family:var(--font-super);min-width:0}
+.input-title::placeholder{color:var(--color-stone-gray);opacity:.5}
+.input-title[readonly]{pointer-events:none}
+.editor-container,.editor-main-area{display:flex;flex-direction:column;flex-grow:1;min-height:0}
+.toolbar-horizontal{display:flex;gap:8px;padding-bottom:16px;border-bottom:1px solid var(--color-soft-mist);margin-bottom:16px;flex-shrink:0;overflow-x:auto;white-space:nowrap}
+.toolbar-horizontal::-webkit-scrollbar{display:none}
+.toolbar-horizontal .btn{padding:6px 12px;font-size:13px;flex-shrink:0}
+.editor-box{flex-grow:1;overflow-y:auto;outline:none;font-size:var(--editor-fs)!important;line-height:1.8;padding-right:8px}
+.editor-box[placeholder]:empty:before{content:attr(placeholder);color:var(--color-stone-gray);opacity:.7;pointer-events:none;display:block}
+.editor-box::-webkit-scrollbar{width:6px}
+.editor-box::-webkit-scrollbar-thumb{background-color:var(--color-soft-mist);border-radius:10px}
+#editorBottomBar{display:none;flex-wrap:wrap;gap:16px;margin-top:16px;align-items:center;border-top:1px solid var(--color-soft-mist);padding-top:24px;justify-content:space-between;flex-shrink:0}
+.word-count-display{font-size:13px;color:var(--color-stone-gray)}
+.folder-select{padding:8px 12px;font-family:var(--font-super);font-size:14px;background:rgba(var(--color-paper-white-rgb),.5);color:var(--user-text-color);border:1px solid var(--color-soft-mist);border-radius:8px;outline:none;cursor:pointer}
 
-        #main-app { display: none; width: 100%; height: 100vh; position: relative; }
-        .main-content { flex-grow: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 0 40px; }
-        @keyframes fadeInSmooth { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        main { animation: fadeInSmooth 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        body.editor-open .main-content { overflow: hidden; }
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;justify-content:center;align-items:center}
+.modal-content{width:100%;max-width:600px;padding:40px;max-height:80vh;overflow-y:auto;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.2);box-sizing:border-box;background-color:rgba(var(--color-paper-white-rgb),.92)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--color-soft-mist);padding-bottom:24px;margin-bottom:24px}
+.modal-header h2{margin:0;font-size:24px;font-weight:500}
+.trash-item{border:1px solid var(--color-soft-mist);border-radius:12px;padding:24px;margin-bottom:16px}
+.trash-title{font-size:18px;font-weight:500;margin-bottom:8px}
 
-        .container { width: 100%; max-width: 1000px; margin: 64px auto; display: flex; flex-direction: column; flex-grow: 1; min-height: 0;}
-        .diary-title { font-size: 48px; font-weight: 500; margin: 0 0 48px 0; color: var(--user-text-color); letter-spacing: -1px; flex-shrink: 0;}
+#toast{visibility:hidden;background-color:var(--user-text-color);color:rgb(var(--color-paper-white-rgb));text-align:center;padding:12px 24px;position:fixed;z-index:4000;bottom:32px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:500;border-radius:999px;opacity:0;transition:opacity .3s}
+#toast.show{visibility:visible;opacity:1}
 
-        #openMenuBtn { position: fixed; top: 24px; right: 24px; z-index: 900; border-radius: 50%; width: 48px; height: 48px; font-size: 20px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;}
+#cropModal{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.crop-header{color:#fff;margin-bottom:20px;font-size:18px;font-weight:500;text-align:center}
+.crop-container{width:100%;max-width:600px;height:60vh;background:#222;border-radius:8px;overflow:hidden}
+.crop-actions{margin-top:24px;display:flex;gap:16px;width:100%;max-width:600px}
+.crop-img{max-width:100%;display:block}
 
-        .sidebar { width: 340px; height: 100vh; overflow-y: auto; position: fixed; right: -360px; top: 0; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; display: flex; flex-direction: column; border-radius: 0; }
-        .sidebar.open { right: 0; }
-        .sidebar-header { padding: 24px; font-weight: 500; font-size: 19px; border-bottom: 1px solid var(--color-soft-mist); display: flex; justify-content: space-between; align-items: center; color: var(--user-text-color); }
-        .sidebar-box { padding: 24px; border-bottom: 1px solid var(--color-soft-mist); }
-        .setting-input { padding: 10px 12px; font-family: var(--font-super); font-size: 14px; width: 100%; box-sizing: border-box; border: 1px solid var(--color-soft-mist); background: rgba(var(--color-paper-white-rgb), 0.5); color: var(--user-text-color); border-radius: 8px; margin-top: 8px; outline: none; }
-        .setting-input:focus { border-color: var(--user-btn-color); }
-        .setting-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 12px; color: var(--user-text-color); }
-
-        .history-grid-container { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .history-grid-container::-webkit-scrollbar { height: 4px; }
-        .history-grid-container::-webkit-scrollbar-thumb { background: var(--color-soft-mist); border-radius: 4px; }
-        .history-img-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; border: 1px solid var(--color-soft-mist); background-size: cover; background-position: center; cursor: pointer; transition: transform 0.2s; }
-        .history-img-box:hover { transform: scale(1.1); }
-
-        .menu-accordion { border: 1px solid var(--color-soft-mist); border-radius: 8px; overflow: hidden; margin-top: 16px; font-size: 14px; }
-        .menu-accordion summary { padding: 12px 16px; font-weight: 500; cursor: pointer; outline: none; list-style: none; display: flex; align-items: center; justify-content: space-between; color: var(--user-text-color);}
-        .menu-accordion summary::-webkit-details-marker { display: none; }
-        .menu-accordion .accordion-content { padding: 16px; background: rgba(0,0,0,0.03); border-top: 1px solid var(--color-soft-mist); }
-        
-        .list-item-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--color-soft-mist); font-size: 14px; border-radius: 8px; }
-        .history-list { list-style: none; padding: 0; margin: 0; }
-        .history-item { margin-bottom: 8px; }
-        .history-item a { text-decoration: none; color: var(--user-text-color); display: block; padding: 8px 12px; transition: 0.2s; border-radius: 8px; }
-        .history-item a:hover { background-color: var(--hover-bg); }
-        .history-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .history-date { font-size: 12px; color: var(--color-stone-gray); margin-top: 4px; }
-
-        .tabs-container { display: flex; gap: 8px; margin-bottom: 48px; padding: 8px; border-radius: 8px; width: fit-content; flex-wrap: wrap; flex-shrink: 0;}
-        .tabs-container .btn { padding: 8px 24px; border-radius: 6px; }
-
-        .folder-grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
-        .folder-box { position: relative; overflow: hidden; width: calc(25% - 24px); min-width: 160px; min-height: 140px; border-radius: 16px; border: 1px solid var(--color-soft-mist); cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; background-size: cover; background-position: center; }
-        .folder-box:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
-        .folder-box::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 80%); z-index: 1; pointer-events: none; }
-        .folder-name { position: relative; z-index: 2; font-size: 18px; font-weight: 600; color: #ffffff; line-height: 1.3; text-shadow: 1px 1px 4px rgba(0,0,0,0.9); }
-
-        .entry-table { width: 100%; border-collapse: collapse; border-radius: 16px; overflow: hidden; }
-        .entry-table th { text-align: left; padding: 16px 24px; border-bottom: 1px solid var(--color-soft-mist); font-size: 13px; color: var(--color-stone-gray); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;}
-        .entry-table td { padding: 16px 24px; border-bottom: 1px solid var(--color-soft-mist); font-size: 15px; color: var(--user-text-color); }
-        .entry-table tr:last-child td { border-bottom: none; }
-        .entry-table tr:hover td { background: var(--hover-bg); cursor: pointer; }
-
-        .back-btn { font-size: 14px; font-weight: 500; color: var(--user-text-color); cursor: pointer; background: none; border: none; padding: 0; margin-bottom: 32px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; opacity: 0.8;}
-        .back-btn:hover { text-decoration: underline; opacity: 1;}
-
-        .editor-section { border-radius: 16px; padding: 32px 40px; margin-bottom: 24px; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-        .editor-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-shrink: 0; border-bottom: 1px solid var(--color-soft-mist); padding-bottom: 16px; }
-        .input-title { flex-grow: 1; border: none; font-size: 36px; font-weight: 600; background: transparent; color: var(--user-text-color); outline: none; font-family: var(--font-super); min-width: 0; }
-        .input-title::placeholder { color: var(--color-stone-gray); opacity: 0.5; }
-        .input-title[readonly] { pointer-events: none; }
-
-        .editor-container { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-        .toolbar-horizontal { display: flex; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-soft-mist); margin-bottom: 16px; flex-shrink: 0; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; }
-        .toolbar-horizontal::-webkit-scrollbar { display: none; }
-        .toolbar-horizontal .btn { padding: 6px 12px; font-size: 13px; flex-shrink: 0;}
-
-        .editor-main-area { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-        .editor-box { flex-grow: 1; overflow-y: auto; outline: none; font-size: var(--editor-fs) !important; line-height: 1.8; color: var(--user-text-color); font-weight: 400; padding-right: 8px; }
-        .editor-box[placeholder]:empty:before { content: attr(placeholder); color: var(--color-stone-gray); opacity: 0.7; pointer-events: none; display: block; }
-        .editor-box::-webkit-scrollbar { width: 6px; }
-        .editor-box::-webkit-scrollbar-thumb { background-color: var(--color-soft-mist); border-radius: 10px; }
-        
-        #editorBottomBar { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; align-items: center; border-top: 1px solid var(--color-soft-mist); padding-top: 24px; justify-content: space-between; flex-shrink: 0; }
-        .word-count-display { font-size: 13px; color: var(--color-stone-gray); text-align: right; }
-        .folder-select { padding: 8px 12px; font-family: var(--font-super); font-size: 14px; background: rgba(var(--color-paper-white-rgb), 0.5); color: var(--user-text-color); border: 1px solid var(--color-soft-mist); border-radius: 8px; outline: none; cursor: pointer; }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 3000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal-content { width: 100%; max-width: 600px; padding: 40px; max-height: 80vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.2); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-soft-mist); padding-bottom: 24px; margin-bottom: 24px; color: var(--user-text-color);}
-        .modal-header h2 { margin: 0; font-size: 24px; font-weight: 500; }
-        .trash-item { border: 1px solid var(--color-soft-mist); border-radius: 12px; padding: 24px; margin-bottom: 16px; background: rgba(var(--color-paper-white-rgb), 0.5); }
-        .trash-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; color: var(--user-text-color);}
-
-        #toast { visibility: hidden; background-color: var(--user-text-color); color: rgba(var(--color-paper-white-rgb), 1); text-align: center; padding: 12px 24px; position: fixed; z-index: 4000; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 500; border-radius: 999px; opacity: 0; transition: opacity 0.3s; }
-        #toast.show { visibility: visible; opacity: 1; }
-
-        /* GIAO DIỆN POPUP CẮT ẢNH THỦ CÔNG */
-        #cropModal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px;
-        }
-        .crop-header { color: #fff; margin-bottom: 20px; font-size: 18px; font-weight: 500; text-align: center; }
-        .crop-container { width: 100%; max-width: 600px; height: 60vh; background: #222; border-radius: 8px; overflow: hidden; }
-        .crop-actions { margin-top: 24px; display: flex; gap: 16px; width: 100%; max-width: 600px; }
-        .crop-img { max-width: 100%; display: block; }
-
-        @media (max-width: 768px) {
-            .main-content { padding-top: calc(max(env(safe-area-inset-top), 24px) + 16px); padding-bottom: max(env(safe-area-inset-bottom), 24px); padding-left: max(env(safe-area-inset-left), 16px); padding-right: max(env(safe-area-inset-right), 16px); }
-            #openMenuBtn { top: calc(max(env(safe-area-inset-top), 24px) + 16px); right: 16px; width: 44px; height: 44px; }
-            .diary-title { font-size: 32px; margin: 0 0 24px 0; min-height: 44px; display: flex; align-items: center; padding-right: 56px; }
-            .editor-section { padding: 24px 20px; }
-            .input-title { font-size: 28px; padding-right: 56px; } 
-            .folder-grid { gap: 16px; margin-bottom: 32px; }
-            .folder-box { width: calc(50% - 8px); min-width: unset; min-height: 120px; padding: 16px; box-sizing: border-box; background-position: top center; }
-            .folder-name { font-size: 16px; }
-            .crop-container { height: 50vh; }
-        }
-    </style>
+@media (max-width:768px){
+  .main-content{padding:calc(max(env(safe-area-inset-top),24px) + 16px) max(env(safe-area-inset-right),16px) max(env(safe-area-inset-bottom),24px) max(env(safe-area-inset-left),16px)}
+  #openMenuBtn{top:calc(max(env(safe-area-inset-top),24px) + 16px);right:16px;width:44px;height:44px}
+  .diary-title{font-size:32px;margin:0 0 24px;min-height:44px;display:flex;align-items:center;padding-right:56px}
+  .editor-section{padding:24px 20px}
+  .input-title{font-size:28px;padding-right:56px}
+  .folder-grid{gap:16px;margin-bottom:32px}
+  .folder-box{width:calc(50% - 8px);min-width:unset;min-height:120px;padding:16px;box-sizing:border-box;background-position:top center}
+  .folder-name{font-size:16px}
+  .crop-container{height:50vh}
+}
+</style>
+<script>if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode');</script>
 </head>
 <body>
-    <div class="bg-overlay"></div>
+<div class="bg-overlay"></div>
 
-    <div id="startup-loader">
-        <div class="loader-container">
-            <div class="loader"></div>
-            <div class="loader"></div>
-            <div class="loader"></div>
+<div id="startup-loader"><div class="loader-container"><div class="loader"></div><div class="loader"></div><div class="loader"></div></div></div>
+
+<div id="cropModal">
+  <div class="crop-header">Di chuyển &amp; Phóng to ảnh để cắt</div>
+  <div class="crop-container"><img id="imageToCrop" class="crop-img" alt=""></div>
+  <div class="crop-actions">
+    <button class="btn btn-full" style="background-color:#555!important;color:#fff!important;margin-top:0" data-act="crop-close">Hủy bỏ</button>
+    <button class="btn btn-full" style="background-color:#28a745!important;color:#fff!important;margin-top:0" data-act="crop-apply">Cắt &amp; Áp dụng</button>
+  </div>
+</div>
+
+<div id="auth-screen">
+  <div class="auth-container glass-panel blur">
+    <h1 class="app-title-display">My Notebook</h1>
+    <input type="email" id="auth-email" class="input" placeholder="Email của bạn" autocomplete="email">
+    <input type="password" id="auth-password" class="input" placeholder="Mật khẩu" autocomplete="current-password">
+    <button class="btn btn-full" id="btn-login" data-act="auth">Đăng Nhập</button>
+    <button class="auth-switch" data-act="auth-toggle">Chưa có tài khoản? Đăng ký ngay</button>
+    <button class="auth-forgot" data-act="auth-forgot">Quên mật khẩu?</button>
+    <div id="auth-message" class="auth-msg"></div>
+  </div>
+</div>
+
+<div id="main-app">
+  <button class="btn glass-panel" id="openMenuBtn" aria-label="Mở menu">☰</button>
+
+  <div class="sidebar glass-panel blur" id="sidebar">
+    <div class="sidebar-header">Công cụ <button id="closeMenuBtn" class="icon-btn" aria-label="Đóng">&times;</button></div>
+    <div class="sidebar-box">
+      <button class="btn btn-full" data-act="new-entry" style="padding:12px;margin:0 0 24px">✍️ Viết bài mới</button>
+
+      <details class="menu-accordion">
+        <summary>🎨 Cài đặt Giao diện <span>▾</span></summary>
+        <div class="accordion-content">
+          <div class="setting-item" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <label for="settingAppTitle">Tiêu đề Ứng dụng:</label>
+            <input type="text" id="settingAppTitle" class="setting-input" placeholder="Ví dụ: Nhật ký của tôi" style="margin:0">
+          </div>
+          <div class="setting-item" style="margin-top:12px"><label>Màu chữ chung:</label><input type="color" id="settingTextColor" style="cursor:pointer;width:30px;height:30px;border:none;background:transparent;padding:0"></div>
+          <div class="setting-item"><label>Màu nền các Nút bấm:</label><input type="color" id="settingBtnColor" style="cursor:pointer;width:30px;height:30px;border:none;background:transparent;padding:0"></div>
+          <div class="setting-item"><label>Chế độ Tối (Dark Mode)</label><input type="checkbox" id="darkModeToggle"></div>
+          <div class="setting-item" style="flex-direction:column;align-items:flex-start;gap:8px"><label>Cỡ chữ soạn thảo</label><input type="range" id="fontSizeSlider" min="14" max="32" value="16" style="width:100%"></div>
+          <div style="margin-top:16px">
+            <label style="font-size:14px;display:block">Link ảnh nền (URL):</label>
+            <input type="text" id="settingBgUrl" class="setting-input" placeholder="Nhập link ảnh..." style="margin:0">
+            <input type="file" id="localBgUploader" accept="image/*" style="display:none">
+            <button class="btn btn-full" data-act="pick-bg" style="background-color:var(--color-stone-gray)!important">Tải ảnh từ máy (Cắt thủ công)</button>
+            <div class="history-grid-container" id="imageHistoryGrid"></div>
+            <button class="btn btn-full" data-act="save-visual" style="margin-top:12px">Lưu Cài Đặt</button>
+          </div>
         </div>
+      </details>
+
+      <details class="menu-accordion">
+        <summary>📁 Quản lý Tabs <span>▾</span></summary>
+        <div class="accordion-content">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            <input type="text" id="newTabName" class="setting-input" placeholder="Tên Tab mới..." style="margin:0">
+            <button class="btn btn-full" data-act="new-tab" style="margin:0">Tạo Tab</button>
+          </div>
+          <div id="tabSettingsList"></div>
+        </div>
+      </details>
+
+      <details class="menu-accordion">
+        <summary>📂 Quản lý Thư mục <span>▾</span></summary>
+        <div class="accordion-content">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            <input type="text" id="newFolderName" class="setting-input" placeholder="Tên Thư mục mới..." style="margin:0">
+            <input type="text" id="newFolderImage" class="setting-input" placeholder="Link ảnh bìa (URL)..." style="margin:0">
+            <button class="btn btn-full" data-act="new-folder" style="margin:0">Tạo Thư mục</button>
+          </div>
+          <div id="folderSettingsList"></div>
+        </div>
+      </details>
+
+      <button class="btn btn-full" data-act="open-trash" style="margin-top:24px">🗑 Thùng rác</button>
+      <button class="btn btn-full" data-act="logout" style="margin-top:12px">Đăng Xuất</button>
     </div>
-
-    <!-- POPUP CẮT ẢNH THỦ CÔNG -->
-    <div id="cropModal">
-        <div class="crop-header">Di chuyển & Phóng to ảnh để cắt</div>
-        <div class="crop-container">
-            <img id="imageToCrop" class="crop-img" src="">
-        </div>
-        <div class="crop-actions">
-            <button class="btn btn-full" style="background-color: #555 !important; color: #fff !important; margin-top: 0;" onclick="closeCropModal()">Hủy bỏ</button>
-            <button class="btn btn-full" style="background-color: #28a745 !important; color: #fff !important; margin-top: 0;" onclick="applyCrop()">Cắt & Áp dụng</button>
-        </div>
+    <div class="sidebar-box" style="flex-grow:1;border-bottom:none">
+      <h3 style="font-size:14px;font-weight:500;color:var(--color-stone-gray);margin-top:0">Hoạt động gần đây</h3>
+      <ul class="history-list" id="sidebarHistoryList"><li style="font-size:13px;color:gray">Đang tải...</li></ul>
     </div>
+  </div>
 
-    <div id="auth-screen">
-        <div class="auth-container glass-panel">
-            <h1 class="app-title-display">My Notebook</h1>
-            <input type="email" id="auth-email" class="input" placeholder="Email của bạn">
-            <input type="password" id="auth-password" class="input" placeholder="Mật khẩu">
-            <button class="btn btn-full" id="btn-login" onclick="handleAuth('login')">Đăng Nhập</button>
-            <button class="auth-switch" onclick="toggleAuthMode()">Chưa có tài khoản? Đăng ký ngay</button>
-            <button class="auth-forgot" onclick="handleForgotPassword()">Quên mật khẩu?</button>
-            <div id="auth-message" class="auth-msg"></div>
+  <div class="main-content">
+    <div class="container">
+      <header id="mainHeader">
+        <h1 class="diary-title app-title-display">My Notebook</h1>
+        <div id="tabsContainer" class="tabs-container glass-panel"></div>
+      </header>
+
+      <main id="mainBlogView" style="display:flex;flex-direction:column;flex-grow:1">
+        <div id="folderGrid" class="folder-grid"></div>
+        <div id="looseEntriesSection" style="margin-top:24px;display:none">
+          <h3 style="font-size:18px;font-weight:500;margin-bottom:16px">Chưa phân loại</h3>
+          <div id="looseEntriesTable"></div>
         </div>
+      </main>
+
+      <main id="folderDetailView" style="display:none;flex-direction:column;flex-grow:1">
+        <button class="back-btn" data-act="close-folder">← Quay lại danh sách</button>
+        <h2 id="folderDetailTitle" style="font-size:32px;font-weight:500;margin:0 0 32px">Tên thư mục</h2>
+        <div id="folderEntriesTable"></div>
+      </main>
+
+      <main id="editorView" class="editor-section glass-panel blur" style="display:none">
+        <button class="back-btn" data-act="close-editor" style="margin-bottom:16px">← Quay lại</button>
+        <div class="editor-header">
+          <input type="text" id="entryTitle" class="input-title" placeholder="Tiêu đề..." readonly>
+          <button id="enableEditBtn" class="btn" data-act="edit-mode" style="padding:10px 16px;flex-shrink:0">✏️ Chỉnh sửa</button>
+        </div>
+        <div class="editor-container">
+          <div id="editorToolbar" class="toolbar-horizontal" style="display:none">
+            <button class="btn" data-fmt="tab">⇥ Thụt lề</button>
+            <button class="btn" data-fmt="bold"><b>B</b></button>
+            <button class="btn" data-fmt="italic"><i>I</i></button>
+            <button class="btn" data-fmt="justifyLeft">Trái</button>
+            <button class="btn" data-fmt="justifyCenter">Giữa</button>
+            <button class="btn" data-fmt="justifyFull">Đều</button>
+            <label class="btn" style="cursor:pointer;gap:4px">Màu <input type="color" id="textColorPicker" style="border:none;padding:0;width:16px;height:16px;background:transparent;cursor:pointer"></label>
+          </div>
+          <div class="editor-main-area">
+            <div id="diaryEditor" class="editor-box" contenteditable="false" placeholder="Bắt đầu viết ở đây..."></div>
+            <div id="editorBottomBar">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <input type="datetime-local" id="entryDate" class="setting-input" style="width:auto;padding:8px 12px;margin:0">
+                <select id="folderSelect" class="folder-select"><option value="">-- Không xếp thư mục --</option></select>
+                <span id="liveWordCount" class="word-count-display">0 từ</span>
+              </div>
+              <button id="saveBtn" class="btn" style="padding:10px 24px;font-size:16px">Lưu tài liệu</button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
+  </div>
+</div>
 
-    <div id="main-app">
-        <button class="btn glass-panel" id="openMenuBtn">☰</button>
+<div class="modal-overlay" id="trashModal">
+  <div class="modal-content glass-panel blur">
+    <div class="modal-header"><h2>Thùng rác</h2><button class="icon-btn" data-act="close-trash" style="font-size:28px;padding:0" aria-label="Đóng">&times;</button></div>
+    <div id="trashListContainer"></div>
+  </div>
+</div>
+<div id="toast" role="status">Thông báo</div>
 
-        <div class="sidebar glass-panel" id="sidebar">
-            <div class="sidebar-header">
-                Công cụ
-                <button id="closeMenuBtn" class="icon-btn">&times;</button>
-            </div>
-            
-            <div class="sidebar-box">
-                <button class="btn btn-full" onclick="openEditor()" style="padding: 12px; margin-top: 0; margin-bottom: 24px;">
-                    ✍️ Viết bài mới
-                </button>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-                <details class="menu-accordion">
-                    <summary>🎨 Cài đặt Giao diện <span>▾</span></summary>
-                    <div class="accordion-content">
-                        <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                            <label>Tiêu đề Ứng dụng:</label>
-                            <input type="text" id="settingAppTitle" class="setting-input" placeholder="Ví dụ: Nhật ký của tôi" oninput="changeAppTitle(this.value)" style="margin: 0;">
-                        </div>
-                        <div class="setting-item" style="margin-top: 12px;">
-                            <label>Màu chữ chung:</label>
-                            <input type="color" id="settingTextColor" oninput="changeTextColor(this.value)" style="cursor:pointer; width:30px; height:30px; border:none; background:transparent; padding:0;">
-                        </div>
-                        <div class="setting-item">
-                            <label>Màu nền các Nút bấm:</label>
-                            <input type="color" id="settingBtnColor" oninput="changeBtnColor(this.value)" style="cursor:pointer; width:30px; height:30px; border:none; background:transparent; padding:0;">
-                        </div>
-                        <div class="setting-item">
-                            <label>Chế độ Tối (Dark Mode)</label>
-                            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)">
-                        </div>
-                        <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                            <label>Cỡ chữ soạn thảo</label>
-                            <input type="range" id="fontSizeSlider" min="14" max="32" value="16" style="width: 100%;" oninput="changeFontSize(this.value)">
-                        </div>
-                        <div style="margin-top: 16px;">
-                            <label style="font-size: 14px; margin-bottom: 4px; display: block;">Link ảnh nền (URL):</label>
-                            <input type="text" id="settingBgUrl" class="setting-input" placeholder="Nhập link ảnh..." style="margin:0;">
-                            
-                            <!-- NÚT UPLOAD ẢNH NỘI BỘ MỚI -->
-                            <input type="file" id="localBgUploader" accept="image/*" style="display: none;">
-                            <button class="btn btn-full" onclick="document.getElementById('localBgUploader').click()" style="margin-top: 8px; background-color: var(--color-stone-gray) !important;">
-                                Tải ảnh từ máy (Cắt thủ công)
-                            </button>
+const app = initializeApp({
+  apiKey: "AIzaSyBGmLt1ka6mEVFcAlKU0-q6or66jTsuep4",
+  authDomain: "uyen-fdf7d.firebaseapp.com",
+  projectId: "uyen-fdf7d",
+  storageBucket: "uyen-fdf7d.firebasestorage.app",
+  messagingSenderId: "539808857702",
+  appId: "1:539808857702:web:bf074ecdde987bfcdc37a7"
+});
+const auth = getAuth(app);
+// Cache offline: lần mở sau gần như tức thì
+// file:// không có origin hợp lệ nên cache đa tab bị lỗi "Unsafe attempt to load URL"; chỉ bật khi chạy qua http(s)
+const isFile = location.protocol === 'file:';
+const dbOpts = { experimentalAutoDetectLongPolling: true }; // tự chuyển sang long-polling khi mạng chặn WebChannel
+if (!isFile) dbOpts.localCache = persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+let db;
+try { db = initializeFirestore(app, dbOpts); }
+catch (e) { db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
+if (isFile) console.warn("Đang mở bằng file://. Hãy chạy qua http://localhost hoặc Firebase Hosting để Firestore hoạt động ổn định.");
 
-                            <div class="history-grid-container" id="imageHistoryGrid"></div>
-                            <button class="btn btn-full" onclick="saveVisualSettings()" style="margin-top: 12px;">Lưu Cài Đặt</button>
-                        </div>
-                    </div>
-                </details>
+const diaryCol = collection(db, "diaries"), tabsCol = collection(db, "notebook_tabs"), foldersCol = collection(db, "notebook_folders");
 
-                <details class="menu-accordion">
-                    <summary>📁 Quản lý Tabs <span>▾</span></summary>
-                    <div class="accordion-content">
-                        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-                            <input type="text" id="newTabName" class="setting-input" placeholder="Tên Tab mới..." style="margin: 0;">
-                            <button class="btn btn-full" onclick="createNewTab()" style="margin: 0;">Tạo Tab</button>
-                        </div>
-                        <div id="tabSettingsList"></div>
-                    </div>
-                </details>
+/* ---------- Tiện ích ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^(https?:|data:image\/)/i.test(u || '') ? u : '';
+const cleanHtml = h => window.DOMPurify ? DOMPurify.sanitize(h || '') : esc(h || '');
+const dateFmt = new Intl.DateTimeFormat('vi-VN', { year:'numeric', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+const formatDate = s => { const d = s && new Date(s); return d && !isNaN(d) ? dateFmt.format(d) : ""; };
+const countText = t => { t = t.trim(); return t ? t.split(/\s+/).length : 0; };
+const htmlToText = h => { const d = document.createElement('div'); d.innerHTML = cleanHtml(h); return d.textContent || ''; };
+let toastTimer;
+function showToast(m) { const t = $('toast'); t.textContent = m; t.className = 'show'; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', 3000); }
+// Bọc thao tác bất đồng bộ: luôn báo lỗi cho người dùng
+const guard = (fn, msg = "Có lỗi xảy ra, vui lòng thử lại!") => async (...a) => { try { return await fn(...a); } catch (e) { console.error(e); showToast(msg); } };
 
-                <details class="menu-accordion">
-                    <summary>📂 Quản lý Thư mục <span>▾</span></summary>
-                    <div class="accordion-content">
-                        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-                            <input type="text" id="newFolderName" class="setting-input" placeholder="Tên Thư mục mới..." style="margin: 0;">
-                            <input type="text" id="newFolderImage" class="setting-input" placeholder="Link ảnh bìa (URL)..." style="margin: 0;">
-                            <button class="btn btn-full" onclick="createNewFolder()" style="margin: 0;">Tạo Thư mục</button>
-                        </div>
-                        <div id="folderSettingsList"></div>
-                    </div>
-                </details>
+// IndexedDB cho ảnh nền (không chặn main thread như localStorage)
+const idb = {
+  open: () => new Promise((res, rej) => { const r = indexedDB.open('notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async tx(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', mode); const q = fn(t.objectStore('kv')); t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); }); },
+  get(k) { return this.tx('readonly', s => s.get(k)); },
+  set(k, v) { return this.tx('readwrite', s => s.put(v, k)); },
+  del(k) { return this.tx('readwrite', s => s.delete(k)); }
+};
 
-                <button class="btn btn-full" onclick="openTrashModal()" style="margin-top: 24px;">🗑 Thùng rác</button>
-                <button class="btn btn-full" onclick="handleLogout()" style="margin-top: 12px;">Đăng Xuất</button>
-            </div>
+/* ---------- Trạng thái ---------- */
+let currentUser = null, isLoginMode = true;
+let settings = { bgUrl: "", isDark: false, fontSize: "16", recentImages: [], appTitle: "My Notebook", textColor: "#292827", btnColor: "#421d24" };
+let allTabs = [], allFolders = [], entriesCache = [];
+let currentTabId = null, currentFolderViewId = null, currentEditingId = null, bgObjectUrl = null;
+const editor = $('diaryEditor');
+const loaderStart = Date.now(), LOADER_MIN = 700;
 
-            <div class="sidebar-box" style="flex-grow: 1; border-bottom: none;">
-                <h3 style="font-size: 14px; font-weight: 500; color: var(--color-stone-gray); margin-top: 0;">Hoạt động gần đây</h3>
-                <ul class="history-list" id="sidebarHistoryList"><li style="font-size: 13px; color: gray;">Đang tải...</li></ul>
-            </div>
-        </div>
+/* ---------- Auth ---------- */
+const btnLogin = $('btn-login'), authMsg = $('auth-message');
+const resetLoginBtn = () => { btnLogin.disabled = false; btnLogin.textContent = isLoginMode ? "Đăng Nhập" : "Tạo Tài Khoản Mới"; };
+function showAuthMsg(m, type) { authMsg.textContent = m; authMsg.className = "auth-msg " + type; authMsg.style.display = "block"; }
 
-        <div class="main-content">
-            <div class="container">
-                <header id="mainHeader">
-                    <h1 class="diary-title app-title-display">My Notebook</h1>
-                    <div id="tabsContainer" class="tabs-container glass-panel"></div>
-                </header>
-                
-                <main id="mainBlogView" style="display: flex; flex-direction: column; flex-grow: 1;">
-                    <div id="folderGrid" class="folder-grid"></div>
-                    <div id="looseEntriesSection" style="margin-top: 24px; display: none;">
-                        <h3 style="font-size: 18px; font-weight: 500; margin-bottom: 16px;">Chưa phân loại</h3>
-                        <div id="looseEntriesTable"></div>
-                    </div>
-                </main>
+async function handleAuth() {
+  const email = $('auth-email').value.trim(), pw = $('auth-password').value.trim();
+  if (!email || !pw) return showAuthMsg("Vui lòng nhập Email và Mật khẩu!", "error");
+  btnLogin.disabled = true; btnLogin.textContent = "Đang xử lý...";
+  try { await (isLoginMode ? signInWithEmailAndPassword : createUserWithEmailAndPassword)(auth, email, pw); }
+  catch (e) {
+    showAuthMsg({ 'auth/email-already-in-use': "Email này đã được đăng ký!", 'auth/invalid-credential': "Sai email hoặc mật khẩu!", 'auth/weak-password': "Mật khẩu phải có ít nhất 6 ký tự!" }[e.code] || "Lỗi. Vui lòng thử lại!", "error");
+  } finally { resetLoginBtn(); }
+}
+async function handleForgot() {
+  const email = $('auth-email').value.trim(); if (!email) return showAuthMsg("Vui lòng nhập Email để nhận link!", "error");
+  try { await sendPasswordResetEmail(auth, email); showAuthMsg("Đã gửi email khôi phục mật khẩu!", "success"); } catch { showAuthMsg("Lỗi: Không tìm thấy tài khoản.", "error"); }
+}
+function toggleAuth() {
+  isLoginMode = !isLoginMode; resetLoginBtn();
+  document.querySelector('.auth-switch').textContent = isLoginMode ? "Chưa có tài khoản? Đăng ký ngay" : "Đã có tài khoản? Đăng nhập";
+  authMsg.style.display = "none";
+}
 
-                <main id="folderDetailView" style="display: none; flex-direction: column; flex-grow: 1;">
-                    <button class="back-btn" onclick="closeFolderView()">← Quay lại danh sách</button>
-                    <h2 id="folderDetailTitle" style="font-size: 32px; font-weight: 500; margin-top: 0; margin-bottom: 32px;">Tên thư mục</h2>
-                    <div id="folderEntriesTable"></div>
-                </main>
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+  if (user) { $('auth-screen').style.display = 'none'; $('main-app').style.display = 'block'; await guard(loadCoreData)(); }
+  else { resetLoginBtn(); $('auth-screen').style.display = 'flex'; $('main-app').style.display = 'none'; }
+  const loader = $('startup-loader');
+  if (loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 450); }, Math.max(0, LOADER_MIN - (Date.now() - loaderStart)));
+});
 
-                <main id="editorView" class="editor-section glass-panel" style="display: none;">
-                    <button class="back-btn" onclick="closeEditor()" style="margin-bottom: 16px;">← Quay lại</button>
-                    
-                    <div class="editor-header">
-                        <input type="text" id="entryTitle" class="input-title" placeholder="Tiêu đề..." readonly>
-                        <button id="enableEditBtn" class="btn" onclick="enableEditMode(true)" style="padding: 10px 16px; flex-shrink: 0;">✏️ Chỉnh sửa</button>
-                    </div>
-                    
-                    <div class="editor-container">
-                        <div id="editorToolbar" class="toolbar-horizontal" style="display: none;">
-                            <button class="btn" onclick="insertTab()" title="Tab khoảng lùi">⇥ Thụt lề</button>
-                            <button class="btn" onclick="formatText('bold')" title="In đậm"><b>B</b></button>
-                            <button class="btn" onclick="formatText('italic')" title="In nghiêng"><i>I</i></button>
-                            <button class="btn" onclick="formatText('justifyLeft')" title="Căn trái">Trái</button>
-                            <button class="btn" onclick="formatText('justifyCenter')" title="Căn giữa">Giữa</button>
-                            <button class="btn" onclick="formatText('justifyFull')" title="Căn đều">Đều</button>
-                            <label class="btn" title="Đổi màu chữ đang viết" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                                Màu <input type="color" id="textColorPicker" oninput="changeColor(this.value)" style="border:none; padding:0; width: 16px; height: 16px; background:transparent; cursor: pointer;">
-                            </label>
-                        </div>
+/* ---------- Giao diện / Cài đặt ---------- */
+function setDark(on) { document.body.classList.toggle('dark-mode', on); document.documentElement.classList.toggle('dark-mode', on); localStorage.setItem('savedDarkMode', on); }
+function setTitle(t) { const v = t.trim() || "My Notebook"; document.title = v; document.querySelectorAll('.app-title-display').forEach(el => el.textContent = v); }
+function setBg(url) { document.body.style.backgroundImage = url ? `url("${url}")` : "none"; document.body.dataset.hasBg = url ? "true" : "false"; }
 
-                        <div class="editor-main-area">
-                            <div id="diaryEditor" class="editor-box" contenteditable="false" placeholder="Bắt đầu viết ở đây..."></div>
-                            
-                            <div id="editorBottomBar" style="display: none;">
-                                <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
-                                    <input type="datetime-local" id="entryDate" class="setting-input" style="width: auto; padding: 8px 12px; margin:0;">
-                                    <select id="folderSelect" class="folder-select" style="margin: 0;">
-                                        <option value="">-- Không xếp thư mục --</option>
-                                    </select>
-                                    <span id="liveWordCount" class="word-count-display" style="margin-top:0;">0 chữ</span>
-                                </div>
-                                <button id="saveBtn" class="btn" style="padding: 10px 24px; font-size: 16px;">Lưu tài liệu</button>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
-        </div>
-    </div>
+async function applyBackground() {
+  let blob = null; try { blob = await idb.get('bg'); } catch {}
+  if (blob) { if (bgObjectUrl) URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = URL.createObjectURL(blob); setBg(bgObjectUrl); }
+  else setBg(safeUrl(settings.bgUrl));
+}
+function renderImageHistory() {
+  $('imageHistoryGrid').innerHTML = (settings.recentImages || []).filter(safeUrl).map(u => `<div class="history-img-box" style="background-image:url('${esc(encodeURI(u))}')" data-act="pick-history" data-url="${esc(u)}" title="${esc(u)}"></div>`).join('');
+}
+function applySettingsToUI() {
+  $('settingBgUrl').value = settings.bgUrl || "";
+  $('darkModeToggle').checked = settings.isDark; setDark(settings.isDark);
+  document.documentElement.style.setProperty('--editor-fs', (settings.fontSize || "16") + 'px');
+  $('fontSizeSlider').value = settings.fontSize || "16";
+  const t = settings.appTitle || "My Notebook"; $('settingAppTitle').value = t === "My Notebook" ? "" : t; setTitle(t);
+  $('settingTextColor').value = settings.textColor; $('settingBtnColor').value = settings.btnColor;
+  document.documentElement.style.setProperty('--user-text-color', settings.textColor);
+  document.documentElement.style.setProperty('--user-btn-color', settings.btnColor);
+  renderImageHistory(); applyBackground();
+}
+async function loadUserSettings() {
+  try { const s = await getDoc(doc(db, "user_settings", currentUser.uid)); if (s.exists()) settings = { ...settings, ...s.data() }; }
+  catch (e) { console.warn("Lỗi tải cài đặt", e); }
+  applySettingsToUI();
+}
+const saveVisualSettings = guard(async () => {
+  const bg = $('settingBgUrl').value.trim();
+  if (bg) {
+    settings.recentImages = [bg, ...(settings.recentImages || []).filter(u => u !== bg)].slice(0, 10);
+    try { await idb.del('bg'); } catch {}
+  }
+  settings = { ...settings, bgUrl: bg, isDark: $('darkModeToggle').checked, fontSize: $('fontSizeSlider').value, appTitle: $('settingAppTitle').value.trim() || "My Notebook", textColor: $('settingTextColor').value, btnColor: $('settingBtnColor').value };
+  applySettingsToUI();
+  await setDoc(doc(db, "user_settings", currentUser.uid), settings, { merge: true });
+  showToast("Đã lưu Cài đặt Giao diện!");
+}, "Lỗi khi lưu cài đặt!");
 
-    <div class="modal-overlay" id="trashModal">
-        <div class="modal-content glass-panel">
-            <div class="modal-header">
-                <h2>Thùng rác</h2>
-                <button class="icon-btn" onclick="document.getElementById('trashModal').style.display='none'" style="font-size: 28px; padding:0;">&times;</button>
-            </div>
-            <div id="trashListContainer"></div>
-        </div>
-    </div>
+/* ---------- Tải dữ liệu (song song) ---------- */
+const byCreated = (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '');
+const userQ = col => getDocs(query(col, where("userId", "==", currentUser.uid)));
 
-    <div id="toast">Thông báo</div>
+async function loadCoreData() {
+  if (!currentUser) return;
+  const [, tabSnap, folderSnap, entrySnap] = await Promise.all([loadUserSettings(), userQ(tabsCol), userQ(foldersCol), userQ(diaryCol)]);
+  allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreated);
+  allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreated);
+  entriesCache = entrySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!allTabs.length) { const createdAt = new Date().toISOString(); const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt }); allTabs.push({ id: r.id, name: "Chung", createdAt }); }
+  if (!allTabs.some(t => t.id === currentTabId)) currentTabId = allTabs[0].id;
+  renderAll();
+}
+function renderAll() { renderTabs(); renderFolderSelect(); renderSidebarSettings(); renderEntries(); }
 
-    <!-- TẢI SCRIPT CỦA CROPPER -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+/* ---------- Render (không gọi mạng) ---------- */
+function renderTabs() {
+  $('tabsContainer').innerHTML = allTabs.map(t => `<button class="btn ${t.id === currentTabId ? 'active-tab' : ''}" data-act="switch-tab" data-id="${esc(t.id)}">${esc(t.name)}</button>`).join('');
+}
+function renderFolderSelect() {
+  const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId);
+  sel.innerHTML = '<option value="">-- Không xếp thư mục --</option>' + fs.map(f => `<option value="${esc(f.id)}">📁 ${esc(f.name)}</option>`).join('');
+  if (fs.some(f => f.id === cur)) sel.value = cur;
+}
+function renderSidebarSettings() {
+  $('tabSettingsList').innerHTML = allTabs.map(t => `<div class="list-item-row"><span>${esc(t.name)}</span><div><button class="icon-btn" data-act="edit-tab" data-id="${esc(t.id)}">✏️</button><button class="icon-btn" data-act="delete-tab" data-id="${esc(t.id)}">🗑️</button></div></div>`).join('');
+  const fs = allFolders.filter(f => f.tabId === currentTabId);
+  $('folderSettingsList').innerHTML = fs.length ? fs.map(f => `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`).join('')
+    : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
+}
+function buildTable(list) {
+  if (!list.length) return '';
+  return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Ngày tạo</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` +
+    list.map(e => `<tr data-act="open-entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
+}
+let viewEntries = []; // bài đã lọc theo tab hiện tại
+function renderEntries() {
+  const sorted = [...entriesCache].sort((a, b) => byCreated(b, a));
+  const tabFolders = allFolders.filter(f => f.tabId === currentTabId), folderIds = new Set(tabFolders.map(f => f.id));
+  const firstTab = allTabs[0]?.id;
+  viewEntries = []; const loose = [];
+  for (const d of sorted) {
+    if (d.status === 'trash') continue;
+    if ((d.tabId || firstTab) !== currentTabId) continue;
+    const e = { id: d.id, title: d.title?.trim() || "Tài liệu không tên", dateStr: formatDate(d.createdAt), wCount: d.wordCount || 0, folderId: d.folderId };
+    viewEntries.push(e); if (!d.folderId || !folderIds.has(d.folderId)) loose.push(e);
+  }
+  $('sidebarHistoryList').innerHTML = viewEntries.length
+    ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('')
+    : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
+  $('folderGrid').innerHTML = tabFolders.map(f => { const img = safeUrl(f.image); return `<div class="folder-box" ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; }).join('');
+  $('looseEntriesSection').style.display = loose.length ? 'block' : 'none';
+  $('looseEntriesTable').innerHTML = buildTable(loose);
+  if (currentFolderViewId) openFolderView(currentFolderViewId);
+}
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+/* ---------- Tab / Thư mục ---------- */
+const createTab = guard(async () => {
+  const name = $('newTabName').value.trim(); if (!name) return showToast("Vui lòng nhập tên Tab!");
+  const createdAt = new Date().toISOString(); const r = await addDoc(tabsCol, { userId: currentUser.uid, name, createdAt });
+  allTabs.push({ id: r.id, name, createdAt }); $('newTabName').value = ""; renderAll(); showToast("Đã tạo Tab mới!");
+});
+const editTab = guard(async id => {
+  const t = allTabs.find(x => x.id === id), n = prompt("Nhập tên mới cho Tab:", t.name)?.trim(); if (!n) return;
+  await updateDoc(doc(db, "notebook_tabs", id), { name: n }); t.name = n; renderAll(); showToast("Đã đổi tên Tab!");
+});
+const deleteTab = guard(async id => {
+  if (allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!");
+  if (!confirm("Xóa Tab này? Các thư mục trong Tab sẽ bị xóa và bài viết được chuyển vào Thùng rác.")) return;
+  const firstTab = allTabs[0].id, batch = writeBatch(db);
+  const entries = entriesCache.filter(e => (e.tabId || firstTab) === id && e.status !== 'trash');
+  entries.forEach(e => batch.update(doc(db, "diaries", e.id), { status: 'trash' }));
+  allFolders.filter(f => f.tabId === id).forEach(f => batch.delete(doc(db, "notebook_folders", f.id)));
+  batch.delete(doc(db, "notebook_tabs", id)); await batch.commit();
+  entries.forEach(e => e.status = 'trash');
+  allFolders = allFolders.filter(f => f.tabId !== id); allTabs = allTabs.filter(t => t.id !== id);
+  if (currentTabId === id) { currentTabId = allTabs[0].id; closeEditor(); closeFolderView(); }
+  renderAll(); showToast("Đã xóa Tab!");
+});
+const createFolder = guard(async () => {
+  const name = $('newFolderName').value.trim(), image = $('newFolderImage').value.trim(); if (!name) return showToast("Vui lòng nhập tên Thư mục!");
+  const createdAt = new Date().toISOString(); const r = await addDoc(foldersCol, { userId: currentUser.uid, tabId: currentTabId, name, image, createdAt });
+  allFolders.push({ id: r.id, tabId: currentTabId, name, image, createdAt });
+  $('newFolderName').value = ""; $('newFolderImage').value = ""; renderAll(); $('folderSelect').value = r.id; showToast("Đã tạo Thư mục!");
+});
+const deleteFolder = guard(async id => {
+  if (!confirm("Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.")) return;
+  await deleteDoc(doc(db, "notebook_folders", id)); allFolders = allFolders.filter(f => f.id !== id);
+  if (currentFolderViewId === id) closeFolderView(); renderAll(); showToast("Đã xóa Thư mục!");
+});
+const editFolder = guard(async id => {
+  const f = allFolders.find(x => x.id === id); if (!f) return;
+  const n = prompt("Nhập tên mới cho Thư mục:", f.name); if (n === null) return;
+  const img = prompt("Nhập link ảnh bìa mới (để trống nếu chỉ dùng màu nền):", f.image || ""); if (img === null) return;
+  if (!n.trim()) return showToast("Tên thư mục không được để trống!");
+  await updateDoc(doc(db, "notebook_folders", id), { name: n.trim(), image: img.trim() });
+  Object.assign(f, { name: n.trim(), image: img.trim() }); renderAll(); showToast("Đã cập nhật Thư mục!");
+});
+let switching = false;
+function switchTab(id) {
+  if (id === currentTabId || switching) return; switching = true;
+  currentTabId = id; closeEditor(); closeFolderView(); renderAll(); switching = false; // không còn gọi mạng
+}
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBGmLt1ka6mEVFcAlKU0-q6or66jTsuep4",
-            authDomain: "uyen-fdf7d.firebaseapp.com",
-            projectId: "uyen-fdf7d",
-            storageBucket: "uyen-fdf7d.firebasestorage.app",
-            messagingSenderId: "539808857702",
-            appId: "1:539808857702:web:bf074ecdde987bfcdc37a7"
-        };
+/* ---------- Xem thư mục / Trình soạn thảo ---------- */
+function openFolderView(id) {
+  const f = allFolders.find(x => x.id === id); if (!f) return;
+  currentFolderViewId = id;
+  $('mainHeader').style.display = 'none'; $('mainBlogView').style.display = 'none'; $('editorView').style.display = 'none'; $('folderDetailView').style.display = 'flex';
+  $('folderDetailTitle').textContent = f.name; $('folderEntriesTable').innerHTML = buildTable(viewEntries.filter(e => e.folderId === id));
+}
+function closeFolderView() { currentFolderViewId = null; $('folderDetailView').style.display = 'none'; $('editorView').style.display = 'none'; $('mainHeader').style.display = 'block'; $('mainBlogView').style.display = 'flex'; }
+function showEditor() {
+  $('sidebar').classList.remove('open');
+  ['mainHeader', 'mainBlogView', 'folderDetailView'].forEach(i => $(i).style.display = 'none');
+  $('editorView').style.display = 'flex'; document.body.classList.add('editor-open');
+}
+function setEditMode(on) {
+  $('entryTitle').toggleAttribute('readonly', !on); editor.setAttribute('contenteditable', on);
+  $('editorToolbar').style.display = on ? 'flex' : 'none'; $('editorBottomBar').style.display = on ? 'flex' : 'none';
+  $('enableEditBtn').style.display = on ? 'none' : 'inline-flex'; if (on) editor.focus();
+}
+function toLocalInput(iso) { const d = new Date(iso); if (isNaN(d)) return ''; d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
+function openEditor() {
+  currentEditingId = null; $('entryTitle').value = ""; editor.innerHTML = ""; $('folderSelect').value = currentFolderViewId || "";
+  $('liveWordCount').textContent = "0 từ"; $('saveBtn').textContent = "Lưu tài liệu"; $('entryDate').value = toLocalInput(new Date().toISOString());
+  showEditor(); setEditMode(true); setTimeout(() => $('entryTitle').focus(), 100);
+}
+function closeEditor() {
+  currentEditingId = null; $('editorView').style.display = 'none'; document.body.classList.remove('editor-open');
+  if (currentFolderViewId) openFolderView(currentFolderViewId); else { $('mainHeader').style.display = 'block'; $('mainBlogView').style.display = 'flex'; }
+}
+function editEntry(id) {
+  const e = entriesCache.find(x => x.id === id); if (!e) return;
+  $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content);
+  $('folderSelect').value = e.folderId || ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
+  $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu";
+  showEditor(); setEditMode(false);
+}
+let wcTimer;
+editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTimeout(() => $('liveWordCount').textContent = countText(editor.textContent) + " từ", 200); });
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        const diaryCollection = collection(db, "diaries");
-        const tabsCollection = collection(db, "notebook_tabs");
-        const foldersCollection = collection(db, "notebook_folders");
+$('saveBtn').addEventListener('click', guard(async () => {
+  const title = $('entryTitle').value.trim(), content = cleanHtml(editor.innerHTML.trim());
+  if (!editor.textContent.trim() && !editor.querySelector('img')) return showToast("Bạn chưa viết nội dung!");
+  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), createdAt: $('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
+  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = "Đang lưu...";
+  try {
+    if (currentEditingId) { await updateDoc(doc(db, "diaries", currentEditingId), data); Object.assign(entriesCache.find(e => e.id === currentEditingId), data); showToast("Đã cập nhật!"); }
+    else { const full = { userId: currentUser.uid, tabId: currentTabId, status: 'active', ...data }; const r = await addDoc(diaryCol, full); entriesCache.push({ id: r.id, ...full }); showToast("Đã lưu trang mới!"); }
+    renderEntries(); closeEditor();
+  } finally { btn.disabled = false; btn.textContent = currentEditingId ? "Cập nhật tài liệu" : "Lưu tài liệu"; }
+}, "Lỗi khi lưu!"));
 
-        let currentUser = null; 
-        
-        let currentSettings = { bgUrl: "", isDark: false, fontSize: "16", recentImages: [], appTitle: "My Notebook", textColor: "#292827", btnColor: "#421d24" };
-        let trashEntriesData = []; let globalParsedEntries = []; let allDiariesGlobal = []; let currentEditingId = null; let activeEntriesData = {}; 
-        let allTabs = []; let allFolders = []; let currentTabId = null; let currentFolderViewId = null; 
+/* Định dạng văn bản */
+let savedRange = null;
+['keyup', 'mouseup', 'mouseleave'].forEach(ev => editor.addEventListener(ev, () => { const s = getSelection(); if (s.rangeCount) savedRange = s.getRangeAt(0); }));
+$('textColorPicker').addEventListener('input', e => {
+  editor.focus(); if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+  document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, e.target.value);
+});
+// Dán văn bản thuần: chặn ảnh và HTML độc hại
+editor.addEventListener('paste', e => {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  if (!text && [...(e.clipboardData?.items || [])].some(i => i.type.startsWith('image'))) return showToast("Ứng dụng chưa hỗ trợ chèn ảnh. Vui lòng chỉ dán chữ!");
+  document.execCommand('insertText', false, text);
+});
 
-        const loaderStartTime = Date.now();
-        const LOADER_ANIMATION_CYCLE = 3000; 
-        
-        const emailInput = document.getElementById('auth-email'); const passwordInput = document.getElementById('auth-password'); const authMsg = document.getElementById('auth-message'); const btnLogin = document.getElementById('btn-login'); const editor = document.getElementById('diaryEditor'); let isLoginMode = true;
+/* ---------- Thùng rác ---------- */
+const setStatus = async (id, status) => { await updateDoc(doc(db, "diaries", id), { status }); const e = entriesCache.find(x => x.id === id); if (e) e.status = status; };
+function renderTrash() {
+  const items = entriesCache.filter(e => e.status === 'trash').sort((a, b) => byCreated(b, a));
+  $('trashListContainer').innerHTML = items.length ? items.map(e => `<div class="trash-item glass-panel"><div class="trash-title">${esc(e.title?.trim() || "Tài liệu không tên")}</div><div style="font-size:14px;color:var(--color-stone-gray);margin-bottom:16px">${esc(formatDate(e.createdAt))}</div><div style="display:flex;gap:12px"><button class="btn" data-act="restore" data-id="${esc(e.id)}">Khôi phục</button><button class="btn" data-act="hard-delete" data-id="${esc(e.id)}">Xóa vĩnh viễn</button></div></div>`).join('')
+    : '<p style="color:var(--color-stone-gray);text-align:center">Thùng rác trống.</p>';
+}
+const moveToTrash = guard(async id => { if (!confirm("Chuyển bài viết này vào Thùng rác?")) return; await setStatus(id, 'trash'); if (currentEditingId === id) closeEditor(); renderEntries(); showToast("Đã chuyển vào thùng rác!"); });
+const restore = guard(async id => { await setStatus(id, 'active'); renderTrash(); renderEntries(); showToast("Đã khôi phục bài viết!"); });
+const hardDelete = guard(async id => { if (!confirm("CẢNH BÁO: Bài viết sẽ bị xóa vĩnh viễn. Tiếp tục?")) return; await deleteDoc(doc(db, "diaries", id)); entriesCache = entriesCache.filter(e => e.id !== id); renderTrash(); showToast("Đã xóa vĩnh viễn!"); });
 
-        window.toggleAuthMode = function() {
-            isLoginMode = !isLoginMode;
-            if (isLoginMode) { btnLogin.innerText = "Đăng Nhập"; document.querySelector('.auth-switch').innerText = "Chưa có tài khoản? Đăng ký ngay"; } 
-            else { btnLogin.innerText = "Tạo Tài Khoản Mới"; document.querySelector('.auth-switch').innerText = "Đã có tài khoản? Đăng nhập"; }
-            authMsg.style.display = "none";
-        };
+/* ---------- Cắt ảnh nền (Cropper.js tải khi cần) ---------- */
+let cropper = null, cropperLoaded;
+function loadCropper() {
+  return cropperLoaded ??= new Promise((res, rej) => {
+    const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css' });
+    const js = Object.assign(document.createElement('script'), { src: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js', onload: res, onerror: () => { cropperLoaded = null; rej(); } });
+    document.head.append(css, js);
+  });
+}
+$('localBgUploader').addEventListener('change', guard(async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  await loadCropper();
+  const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  $('sidebar').classList.remove('open');
+  const img = $('imageToCrop'); img.src = src; $('cropModal').style.display = 'flex';
+  cropper?.destroy();
+  cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false });
+}, "Không tải được công cụ cắt ảnh!"));
+function closeCrop() { $('cropModal').style.display = 'none'; cropper?.destroy(); cropper = null; }
+const applyCrop = guard(async () => {
+  if (!cropper) return;
+  const w = Math.min(innerWidth, 1280), h = Math.round(w * innerHeight / innerWidth);
+  const blob = await new Promise(res => cropper.getCroppedCanvas({ width: w, height: h, imageSmoothingQuality: 'high' }).toBlob(res, 'image/jpeg', 0.75));
+  await idb.set('bg', blob); $('settingBgUrl').value = ''; await applyBackground();
+  showToast("Đã áp dụng hình nền thành công!"); closeCrop();
+});
 
-        window.handleAuth = async function() {
-            const email = emailInput.value.trim(); const password = passwordInput.value.trim();
-            if (!email || !password) { showAuthMsg("Vui lòng nhập Email và Mật khẩu!", "error"); return; }
-            btnLogin.disabled = true; btnLogin.innerText = "Đang xử lý...";
-            try {
-                if (isLoginMode) await signInWithEmailAndPassword(auth, email, password);
-                else await createUserWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                if (error.code === 'auth/email-already-in-use') showAuthMsg("Email này đã được đăng ký!", "error");
-                else if (error.code === 'auth/invalid-credential') showAuthMsg("Sai email hoặc mật khẩu!", "error");
-                else if (error.code === 'auth/weak-password') showAuthMsg("Mật khẩu phải có ít nhất 6 ký tự!", "error");
-                else showAuthMsg("Lỗi. Vui lòng thử lại!", "error");
-                btnLogin.disabled = false; btnLogin.innerText = isLoginMode ? "Đăng Nhập" : "Tạo Tài Khoản Mới";
-            }
-        };
-
-        window.handleForgotPassword = async function() {
-            const email = emailInput.value.trim(); if(!email) { showAuthMsg("Vui lòng nhập Email để nhận link!", "error"); return; }
-            try { await sendPasswordResetEmail(auth, email); showAuthMsg("Đã gửi email khôi phục mật khẩu!", "success"); } catch (error) { showAuthMsg("Lỗi: Không tìm thấy tài khoản.", "error"); }
-        }
-
-        window.handleLogout = async function() { if(confirm("Bạn có chắc muốn đăng xuất?")) await signOut(auth); };
-        function showAuthMsg(msg, type) { authMsg.innerText = msg; authMsg.className = "auth-msg " + type; authMsg.style.display = "block"; }
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) { currentUser = user; document.getElementById('auth-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; await loadCoreData(); } 
-            else { currentUser = null; document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('main-app').style.display = 'none'; }
-            const loader = document.getElementById('startup-loader');
-            if (loader) {
-                const elapsed = Date.now() - loaderStartTime; const remainingTime = LOADER_ANIMATION_CYCLE - (elapsed % LOADER_ANIMATION_CYCLE);
-                setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }, remainingTime);
-            }
-        });
-
-        async function loadUserSettings() { try { const docRef = doc(db, "user_settings", currentUser.uid); const docSnap = await getDoc(docRef); if(docSnap.exists()) { currentSettings = { ...currentSettings, ...docSnap.data() }; } } catch (error) { console.warn("Lỗi tải cài đặt cá nhân.", error); } applySettingsToUI(); }
-
-        function applySettingsToUI() {
-            const localBg = localStorage.getItem('localBackground');
-            
-            if (localBg) {
-                document.body.style.backgroundImage = `url('${localBg}')`; document.body.dataset.hasBg = "true";
-            } else if(currentSettings.bgUrl) { 
-                document.body.style.backgroundImage = `url('${currentSettings.bgUrl}')`; document.body.dataset.hasBg = "true"; 
-            } else { 
-                document.body.style.backgroundImage = "none"; document.body.dataset.hasBg = "false"; 
-            }
-            document.getElementById('settingBgUrl').value = currentSettings.bgUrl || "";
-            document.getElementById('darkModeToggle').checked = currentSettings.isDark;
-            
-            if (currentSettings.isDark) { document.body.classList.add('dark-mode'); document.documentElement.classList.add('dark-mode'); } 
-            else { document.body.classList.remove('dark-mode'); document.documentElement.classList.remove('dark-mode'); }
-
-            document.documentElement.style.setProperty('--editor-fs', (currentSettings.fontSize || "16") + 'px');
-            document.getElementById('fontSizeSlider').value = currentSettings.fontSize || "16";
-
-            const appTitle = currentSettings.appTitle || "My Notebook"; document.getElementById('settingAppTitle').value = appTitle === "My Notebook" ? "" : appTitle; changeAppTitle(appTitle);
-            const txtColor = currentSettings.textColor || "#292827"; const btnColor = currentSettings.btnColor || "#421d24";
-            document.getElementById('settingTextColor').value = txtColor; document.getElementById('settingBtnColor').value = btnColor;
-            document.documentElement.style.setProperty('--user-text-color', txtColor); document.documentElement.style.setProperty('--user-btn-color', btnColor);
-            renderImageHistory();
-        }
-
-        window.toggleDarkMode = function(isDark) { if(isDark) { document.body.classList.add('dark-mode'); document.documentElement.classList.add('dark-mode'); } else { document.body.classList.remove('dark-mode'); document.documentElement.classList.remove('dark-mode'); } }
-        window.changeFontSize = function(size) { document.documentElement.style.setProperty('--editor-fs', size + 'px'); }
-        window.changeAppTitle = function(title) { const displayTitle = title.trim() || "My Notebook"; document.title = displayTitle; document.querySelectorAll('.app-title-display').forEach(el => el.innerText = displayTitle); }
-        window.changeTextColor = function(color) { document.documentElement.style.setProperty('--user-text-color', color); }
-        window.changeBtnColor = function(color) { document.documentElement.style.setProperty('--user-btn-color', color); }
-
-        window.renderImageHistory = function() {
-            const urls = currentSettings.recentImages || []; const bgGrid = document.getElementById('imageHistoryGrid');
-            if (bgGrid) { bgGrid.innerHTML = urls.map(url => `<div class="history-img-box" style="background-image: url('${url}')" onclick="selectHistoryImage('${url}')" title="${url}"></div>`).join(''); }
-        }
-
-        window.selectHistoryImage = function(url) { localStorage.removeItem('localBackground'); document.getElementById('settingBgUrl').value = url; document.body.style.backgroundImage = `url('${url}')`; document.body.dataset.hasBg = "true"; showToast("Đã chọn ảnh từ lịch sử!"); }
-
-        window.addImageUrlToHistory = function(url) {
-            if (!url || url.trim() === '') return; url = url.trim(); if (!currentSettings.recentImages) currentSettings.recentImages = [];
-            currentSettings.recentImages = currentSettings.recentImages.filter(u => u !== url); currentSettings.recentImages.unshift(url);
-            if (currentSettings.recentImages.length > 10) currentSettings.recentImages = currentSettings.recentImages.slice(0, 10);
-            renderImageHistory(); 
-        }
-
-        window.saveVisualSettings = async function() {
-            const bg = document.getElementById('settingBgUrl').value.trim(); const isDark = document.getElementById('darkModeToggle').checked; const fontSize = document.getElementById('fontSizeSlider').value;
-            const title = document.getElementById('settingAppTitle').value.trim() || "My Notebook"; const txtColor = document.getElementById('settingTextColor').value; const btnColor = document.getElementById('settingBtnColor').value;
-            if(bg) { addImageUrlToHistory(bg); localStorage.removeItem('localBackground'); }
-            currentSettings = { ...currentSettings, bgUrl: bg, isDark: isDark, fontSize: fontSize, appTitle: title, textColor: txtColor, btnColor: btnColor };
-            applySettingsToUI();
-            try { await setDoc(doc(db, "user_settings", currentUser.uid), currentSettings, { merge: true }); showToast("Đã lưu Cài đặt Giao diện!"); } catch(e) { showToast("Lỗi khi lưu cài đặt!"); }
-        }
-
-        async function loadCoreData() {
-            if (!currentUser) return;
-            try {
-                await loadUserSettings();
-                const qTabs = query(tabsCollection, where("userId", "==", currentUser.uid)); const tabSnap = await getDocs(qTabs);
-                allTabs = []; tabSnap.forEach(doc => allTabs.push({ id: doc.id, ...doc.data() })); allTabs.sort((a, b) => (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime()));
-                if (allTabs.length === 0) { const newTabRef = await addDoc(tabsCollection, { userId: currentUser.uid, name: "Chung", createdAt: new Date().toISOString() }); allTabs.push({ id: newTabRef.id, name: "Chung" }); }
-                if (!currentTabId || !allTabs.find(t => t.id === currentTabId)) { currentTabId = allTabs[0].id; }
-                const qFolders = query(foldersCollection, where("userId", "==", currentUser.uid)); const folderSnap = await getDocs(qFolders);
-                allFolders = []; folderSnap.forEach(doc => allFolders.push({ id: doc.id, ...doc.data() })); allFolders.sort((a, b) => (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime()));
-                renderTabs(); renderFolderSelect(); renderSidebarSettings(); await loadEntries();
-            } catch (error) { console.error("Lỗi:", error); showToast("Có lỗi khi tải dữ liệu!"); }
-        }
-
-        function renderSidebarSettings() {
-            const tabListEl = document.getElementById('tabSettingsList'); tabListEl.innerHTML = '';
-            allTabs.forEach(tab => { tabListEl.innerHTML += `<div class="list-item-row"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${tab.name}</span><div class="action-btns"><button class="icon-btn" onclick="editTab('${tab.id}')">✏️</button><button class="icon-btn" onclick="deleteTab('${tab.id}')">🗑️️</button></div></div>`; });
-            const folderListEl = document.getElementById('folderSettingsList'); const tabFolders = allFolders.filter(f => f.tabId === currentTabId); folderListEl.innerHTML = '';
-            if (tabFolders.length === 0) folderListEl.innerHTML = '<div style="font-size:13px; color:var(--color-stone-gray); font-style:italic;">Chưa có thư mục</div>'; 
-            tabFolders.forEach(f => { folderListEl.innerHTML += `<div class="list-item-row" style="margin-bottom:8px;"><span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px;">${f.name}</span><div class="action-btns"><button class="icon-btn" onclick="editFolder('${f.id}')">✏️</button><button class="icon-btn" onclick="deleteFolder('${f.id}')">🗑️</button></div></div>`; });
-        }
-
-        function renderTabs() {
-            const container = document.getElementById('tabsContainer'); container.innerHTML = '';
-            allTabs.forEach(tab => {
-                const isActive = tab.id === currentTabId; const btn = document.createElement('button'); btn.className = `btn ${isActive ? 'active-tab' : ''}`;
-                if(isActive) { btn.style.opacity = '1'; btn.style.boxShadow = 'inset 0 0 0 2px var(--user-text-color)'; } else { btn.style.opacity = '0.7'; }
-                btn.onclick = () => switchTab(tab.id); btn.innerText = tab.name; container.appendChild(btn);
-            });
-        }
-
-        function renderFolderSelect() {
-            const select = document.getElementById('folderSelect'); const currentVal = select.value; select.innerHTML = '<option value="">-- Không xếp thư mục --</option>';
-            const tabFolders = allFolders.filter(f => f.tabId === currentTabId);
-            tabFolders.forEach(folder => { const opt = document.createElement('option'); opt.value = folder.id; opt.textContent = `📁 ${folder.name}`; select.appendChild(opt); });
-            if (currentVal && tabFolders.find(f => f.id === currentVal)) { select.value = currentVal; }
-        }
-
-        function buildTableHTML(entries) {
-            if(entries.length === 0) return ``;
-            let html = `<table class="entry-table glass-panel"><thead><tr><th style="width: 50%;">Tiêu đề</th><th style="width: 25%;">Ngày tạo</th><th style="width: 15%;">Độ dài</th><th style="width: 10%; text-align:center;">Hành động</th></tr></thead><tbody>`;
-            entries.forEach(e => { html += `<tr onclick="editEntry('${e.id}')"><td style="font-weight:500;">${e.title}</td><td>${e.dateStr}</td><td style="color:var(--color-stone-gray);">${e.wCount} từ</td><td style="text-align:center;"><button class="icon-btn" onclick="event.stopPropagation(); moveToTrash('${e.id}')" title="Xóa">🗑️</button></td></tr>`; });
-            html += `</tbody></table>`; return html;
-        }
-
-        async function loadEntries() {
-            if (!currentUser) return;
-            try {
-                const q = query(diaryCollection, where("userId", "==", currentUser.uid)); const querySnapshot = await getDocs(q);
-                const folderGridEl = document.getElementById('folderGrid'); const looseEntriesTableEl = document.getElementById('looseEntriesTable'); const sidebarHistoryList = document.getElementById('sidebarHistoryList');
-                sidebarHistoryList.innerHTML = ''; trashEntriesData = []; activeEntriesData = {}; globalParsedEntries = [];
-                let allEntries = []; querySnapshot.forEach((docSnap) => { allEntries.push({ id: docSnap.id, ...docSnap.data() }); });
-                allEntries.sort((a, b) => (new Date(b.createdAt || 0).getTime()) - (new Date(a.createdAt || 0).getTime())); allDiariesGlobal = allEntries; 
-                const looseEntries = []; const tabFolders = allFolders.filter(f => f.tabId === currentTabId);
-
-                allEntries.forEach((data) => {
-                    const docId = data.id; const dateStr = formatDate(data.createdAt); const displayTitle = data.title && data.title.trim() !== "" ? data.title : "Tài liệu không tên"; const wCount = data.wordCount || 0;
-                    if (data.status === 'trash') { trashEntriesData.push({ id: docId, title: displayTitle, date: dateStr, content: data.content }); return; }
-                    const eTabId = data.tabId || (allTabs.length > 0 ? allTabs[0].id : null); if (eTabId !== currentTabId) return; 
-
-                    activeEntriesData[docId] = { title: data.title, content: data.content, folderId: data.folderId || "", createdAtISO: data.createdAt }; 
-                    const entryObj = { id: docId, title: displayTitle, dateStr, content: data.content, wCount, folderId: data.folderId }; globalParsedEntries.push(entryObj);
-                    if (!data.folderId || !tabFolders.find(f => f.id === data.folderId)) looseEntries.push(entryObj);
-                    const li = document.createElement('li'); li.className = 'history-item';
-                    li.innerHTML = `<a href="#" onclick="editEntry('${docId}')"><div class="history-title">${displayTitle}</div><div class="history-date">${dateStr}</div></a>`;
-                    sidebarHistoryList.appendChild(li);
-                });
-
-                if(globalParsedEntries.length === 0) sidebarHistoryList.innerHTML = '<li style="font-size: 13px; color: var(--color-stone-gray);">Chưa có hoạt động</li>';
-                folderGridEl.innerHTML = '';
-                if(tabFolders.length > 0) { tabFolders.forEach(f => { const bgStyle = f.image ? `background-image: url('${f.image}');` : `background-color: var(--user-btn-color);`; folderGridEl.innerHTML += `<div class="folder-box" style="${bgStyle}" onclick="openFolderView('${f.id}')"><div class="folder-name">${f.name}</div></div>`; }); }
-                const looseSectionEl = document.getElementById('looseEntriesSection');
-                if (looseEntries.length > 0) { looseSectionEl.style.display = 'block'; looseEntriesTableEl.innerHTML = buildTableHTML(looseEntries); } else { looseSectionEl.style.display = 'none'; looseEntriesTableEl.innerHTML = ''; }
-                if(currentFolderViewId) openFolderView(currentFolderViewId);
-            } catch (error) { console.error("Lỗi:", error); }
-        }
-
-        window.createNewTab = async function() { const name = document.getElementById('newTabName').value.trim(); if(!name) return showToast("Vui lòng nhập tên Tab!"); await addDoc(tabsCollection, { userId: currentUser.uid, name: name, createdAt: new Date().toISOString() }); document.getElementById('newTabName').value = ""; showToast("Đã tạo Tab mới!"); await loadCoreData(); }
-        window.editTab = async function(id) { const tab = allTabs.find(t => t.id === id); const newName = prompt("Nhập tên mới cho Tab:", tab.name); if(newName && newName.trim() !== "") { await updateDoc(doc(db, "notebook_tabs", id), { name: newName.trim() }); showToast("Đã đổi tên Tab!"); await loadCoreData(); } }
-        window.deleteTab = async function(id) { if(allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!"); if(confirm(`Xác nhận xóa tab này?`)) { await deleteDoc(doc(db, "notebook_tabs", id)); if(currentTabId === id) currentTabId = allTabs.find(t => t.id !== id).id; showToast("Đã xóa Tab!"); await loadCoreData(); } }
-        window.createNewFolder = async function() { const name = document.getElementById('newFolderName').value.trim(); const imageUrl = document.getElementById('newFolderImage').value.trim(); if(!name) return showToast("Vui lòng nhập tên Thư mục!"); const folderRef = await addDoc(foldersCollection, { userId: currentUser.uid, tabId: currentTabId, name: name, image: imageUrl, createdAt: new Date().toISOString() }); document.getElementById('newFolderName').value = ""; document.getElementById('newFolderImage').value = ""; showToast("Đã tạo Thư mục!"); await loadCoreData(); const selectEl = document.getElementById('folderSelect'); if(selectEl) selectEl.value = folderRef.id; }
-        window.deleteFolder = async function(id) { if(confirm(`Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.`)) { await deleteDoc(doc(db, "notebook_folders", id)); showToast("Đã xóa Thư mục!"); if(currentFolderViewId === id) closeFolderView(); await loadCoreData(); } }
-        window.editFolder = async function(id) { const folder = allFolders.find(f => f.id === id); if (!folder) return; const newName = prompt("Nhập tên mới cho Thư mục:", folder.name); if (newName === null) return; const newImage = prompt("Nhập link ảnh bìa mới (để trống nếu chỉ dùng màu nền):", folder.image || ""); if (newImage === null) return; if (newName.trim() !== "") { await updateDoc(doc(db, "notebook_folders", id), { name: newName.trim(), image: newImage.trim() }); showToast("Đã cập nhật Thư mục!"); if (currentFolderViewId === id) { document.getElementById('folderDetailTitle').innerText = newName.trim(); } await loadCoreData(); } else { showToast("Tên thư mục không được để trống!"); } }
-        
-        async function switchTab(tabId) { if (currentTabId === tabId) return; currentTabId = tabId; closeEditor(); closeFolderView(); renderTabs(); renderFolderSelect(); renderSidebarSettings(); await loadEntries(); }
-        window.openFolderView = function(folderId) { currentFolderViewId = folderId; const folder = allFolders.find(f => f.id === folderId); if(!folder) return; document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('editorView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'flex'; document.getElementById('folderDetailTitle').innerText = folder.name; const entriesInFolder = globalParsedEntries.filter(e => e.folderId === folderId); document.getElementById('folderEntriesTable').innerHTML = buildTableHTML(entriesInFolder); }
-        window.closeFolderView = function() { currentFolderViewId = null; document.getElementById('folderDetailView').style.display = 'none'; document.getElementById('editorView').style.display = 'none'; document.getElementById('mainHeader').style.display = 'block'; document.getElementById('mainBlogView').style.display = 'flex'; }
-
-        function countWords(str) { return str.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(w => w.length > 0).length; }
-        editor.addEventListener('input', () => { document.getElementById('liveWordCount').innerText = `${countWords(editor.innerHTML)} từ`; });
-
-        window.enableEditMode = function(isEdit) {
-            const titleInput = document.getElementById('entryTitle'); const editorBox = document.getElementById('diaryEditor'); const toolbar = document.getElementById('editorToolbar'); const bottomBar = document.getElementById('editorBottomBar'); const editBtn = document.getElementById('enableEditBtn');
-            if(isEdit) { titleInput.removeAttribute('readonly'); editorBox.setAttribute('contenteditable', 'true'); toolbar.style.display = 'flex'; bottomBar.style.display = 'flex'; editBtn.style.display = 'none'; editorBox.focus(); } 
-            else { titleInput.setAttribute('readonly', 'true'); editorBox.setAttribute('contenteditable', 'false'); toolbar.style.display = 'none'; bottomBar.style.display = 'none'; editBtn.style.display = 'inline-flex'; }
-        }
-
-        window.openEditor = function() {
-            document.getElementById('sidebar').classList.remove('open'); currentEditingId = null; document.getElementById('entryTitle').value = ""; editor.innerHTML = ""; document.getElementById('folderSelect').value = currentFolderViewId || ""; document.getElementById('liveWordCount').innerText = "0 từ"; document.getElementById('saveBtn').textContent = "Lưu tài liệu";
-            const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); document.getElementById('entryDate').value = now.toISOString().slice(0,16);
-            document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'none'; document.getElementById('editorView').style.display = 'flex';
-            document.body.classList.add('editor-open'); enableEditMode(true); setTimeout(() => document.getElementById('entryTitle').focus(), 100);
-        }
-
-        window.closeEditor = function() { currentEditingId = null; document.getElementById('editorView').style.display = 'none'; document.body.classList.remove('editor-open'); if (currentFolderViewId) { openFolderView(currentFolderViewId); } else { document.getElementById('mainHeader').style.display = 'block'; document.getElementById('mainBlogView').style.display = 'flex'; } }
-
-        window.editEntry = function(docId) {
-            document.getElementById('sidebar').classList.remove('open'); const entry = activeEntriesData[docId]; if(!entry) return;
-            document.getElementById('entryTitle').value = entry.title; editor.innerHTML = entry.content; document.getElementById('folderSelect').value = entry.folderId; document.getElementById('liveWordCount').innerText = countWords(entry.content) + " từ";
-            if(entry.createdAtISO) { const entryDate = new Date(entry.createdAtISO); if(!isNaN(entryDate.getTime())) { entryDate.setMinutes(entryDate.getMinutes() - entryDate.getTimezoneOffset()); document.getElementById('entryDate').value = entryDate.toISOString().slice(0,16); } }
-            currentEditingId = docId; document.getElementById('saveBtn').textContent = "Cập nhật tài liệu";
-            document.getElementById('mainHeader').style.display = 'none'; document.getElementById('mainBlogView').style.display = 'none'; document.getElementById('folderDetailView').style.display = 'none'; document.getElementById('editorView').style.display = 'flex';
-            document.body.classList.add('editor-open'); enableEditMode(false);
-        }
-
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            const title = document.getElementById('entryTitle').value.trim(); const content = editor.innerHTML.trim(); if (content === "" || content === "<br>") { showToast("Bạn chưa viết nội dung!"); return; }
-            const wordCount = countWords(content); const folderId = document.getElementById('folderSelect').value;
-            const selectedDate = document.getElementById('entryDate').value; const finalIsoDate = selectedDate ? new Date(selectedDate).toISOString() : new Date().toISOString();
-            document.getElementById('saveBtn').disabled = true; document.getElementById('saveBtn').textContent = "Đang lưu...";
-            try { if (currentEditingId) { await updateDoc(doc(db, "diaries", currentEditingId), { title, content, folderId, wordCount, createdAt: finalIsoDate }); showToast("Đã cập nhật!"); } else { await addDoc(diaryCollection, { userId: currentUser.uid, tabId: currentTabId, folderId, title, content, wordCount, status: 'active', createdAt: finalIsoDate }); showToast("Đã lưu trang mới!"); } closeEditor(); loadEntries(); } catch (error) { showToast("Lỗi khi lưu!"); } finally { document.getElementById('saveBtn').disabled = false; }
-        });
-
-        let savedRange = null; ['keyup', 'mouseup', 'mouseleave'].forEach(event => { editor.addEventListener(event, () => { const sel = window.getSelection(); if (sel.rangeCount > 0) { savedRange = sel.getRangeAt(0); } }); });
-        window.changeColor = function(color) { editor.focus(); if (savedRange) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange); } document.execCommand("styleWithCSS", false, true); document.execCommand('foreColor', false, color); };
-        window.formatText = function(cmd) { document.execCommand(cmd, false, null); editor.focus(); };
-        window.insertTab = function() { document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'); editor.focus(); };
-        editor.addEventListener('keydown', function(e) { if (e.key === 'Tab') { e.preventDefault(); insertTab(); } });
-
-        function showToast(message) { const toast = document.getElementById('toast'); toast.textContent = message; toast.className = "show"; setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000); }
-        function formatDate(dateString) { if(!dateString) return ""; return new Date(dateString).toLocaleDateString('vi-VN', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-        
-        document.getElementById('openMenuBtn').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
-        document.getElementById('closeMenuBtn').addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
-        document.addEventListener('click', function(event) { const sidebar = document.getElementById('sidebar'); const openBtn = document.getElementById('openMenuBtn'); if (sidebar.classList.contains('open') && !sidebar.contains(event.target) && !openBtn.contains(event.target)) sidebar.classList.remove('open'); });
-
-        window.moveToTrash = async function(docId) { if(confirm("Chuyển bài viết này vào Thùng rác?")) { await updateDoc(doc(db, "diaries", docId), { status: 'trash' }); showToast("Đã chuyển vào thùng rác!"); if(currentEditingId === docId) closeEditor(); loadEntries(); } }
-        window.openTrashModal = function() { document.getElementById('sidebar').classList.remove('open'); renderTrashItems(); document.getElementById('trashModal').style.display = 'flex'; }
-        function renderTrashItems() {
-            const container = document.getElementById('trashListContainer'); container.innerHTML = '';
-            if (trashEntriesData.length === 0) { container.innerHTML = '<p style="color:var(--color-stone-gray); text-align:center;">Thùng rác trống.</p>'; return; }
-            trashEntriesData.forEach(item => { const div = document.createElement('div'); div.className = 'trash-item glass-panel'; div.innerHTML = `<div class="trash-title">${item.title}</div><div style="font-size:14px; color:var(--color-stone-gray); margin-bottom:16px;">${item.date}</div><div style="display:flex; gap:12px;"><button class="btn" onclick="restoreFromTrash('${item.id}')">Khôi phục</button><button class="btn" onclick="hardDelete('${item.id}')">Xóa vĩnh viễn</button></div>`; container.appendChild(div); });
-        }
-        window.restoreFromTrash = async function(docId) { await updateDoc(doc(db, "diaries", docId), { status: 'active' }); showToast("Đã khôi phục bài viết!"); loadEntries(); setTimeout(renderTrashItems, 500); }
-        window.hardDelete = async function(docId) { if(confirm("CẢNH BÁO: Bài viết sẽ bị xóa vĩnh viễn. Tiếp tục?")) { await deleteDoc(doc(db, "diaries", docId)); showToast("Đã xóa vĩnh viễn!"); loadEntries(); setTimeout(renderTrashItems, 500); } }
-
-        // =========================================================
-        // TÍCH HỢP LOGIC CẮT ẢNH THỦ CÔNG (CROPPER.JS)
-        // =========================================================
-        let cropper = null;
-
-        document.getElementById('localBgUploader').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                // Đóng sidebar để nhường chỗ cho popup cắt ảnh
-                document.getElementById('sidebar').classList.remove('open');
-                
-                // Mở modal cắt ảnh
-                document.getElementById('imageToCrop').src = event.target.result;
-                document.getElementById('cropModal').style.display = 'flex';
-                
-                // Khởi tạo Cropper.js
-                if (cropper) { cropper.destroy(); }
-                const imgElement = document.getElementById('imageToCrop');
-                
-                cropper = new Cropper(imgElement, {
-                    // Ép tỷ lệ khung cắt đúng bằng tỷ lệ màn hình điện thoại/laptop của bạn hiện tại
-                    aspectRatio: window.innerWidth / window.innerHeight, 
-                    viewMode: 1,
-                    dragMode: 'move', // Cho phép dùng ngón tay kéo thả ảnh bên trong khung
-                    autoCropArea: 1,
-                    restore: false,
-                    guides: true,
-                    center: true,
-                    highlight: false,
-                    cropBoxMovable: false, // Cố định khung cắt, chỉ cho phép di chuyển ảnh
-                    cropBoxResizable: false, // Cố định kích thước khung cắt
-                    toggleDragModeOnDblclick: false,
-                });
-            }
-            reader.readAsDataURL(file);
-            e.target.value = ''; // Reset lại ô chọn file
-        });
-
-        window.closeCropModal = function() {
-            document.getElementById('cropModal').style.display = 'none';
-            if (cropper) { cropper.destroy(); cropper = null; }
-        }
-
-        window.applyCrop = function() {
-            if (!cropper) return;
-            
-            // Lấy ra phần ảnh đã cắt khớp chính xác với màn hình
-            const canvas = cropper.getCroppedCanvas({
-                width: window.innerWidth,
-                height: window.innerHeight,
-                imageSmoothingEnabled: true,
-                imageSmoothingQuality: 'high',
-            });
-
-            // Chuyển thành Base64
-            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-
-            // Gắn làm hình nền ngay lập tức
-            document.body.style.backgroundImage = `url('${base64Image}')`;
-            document.body.dataset.hasBg = "true";
-            
-            // Lưu vào bộ nhớ máy để tải lại lần sau
-            localStorage.setItem('localBackground', base64Image);
-            document.getElementById('settingBgUrl').value = ''; 
-            
-            showToast("Đã áp dụng hình nền thành công!");
-            closeCropModal();
-        }
-
-    </script>
+/* ---------- Điều phối sự kiện (event delegation) ---------- */
+const actions = {
+  'auth': handleAuth, 'auth-toggle': toggleAuth, 'auth-forgot': handleForgot,
+  'logout': () => { if (confirm("Bạn có chắc muốn đăng xuất?")) signOut(auth); },
+  'new-entry': openEditor, 'close-editor': closeEditor, 'edit-mode': () => setEditMode(true),
+  'switch-tab': t => switchTab(t.dataset.id), 'new-tab': createTab, 'edit-tab': t => editTab(t.dataset.id), 'delete-tab': t => deleteTab(t.dataset.id),
+  'new-folder': createFolder, 'edit-folder': t => editFolder(t.dataset.id), 'delete-folder': t => deleteFolder(t.dataset.id),
+  'open-folder': t => openFolderView(t.dataset.id), 'close-folder': closeFolderView,
+  'open-entry': t => editEntry(t.dataset.id), 'trash': t => moveToTrash(t.dataset.id),
+  'open-trash': () => { $('sidebar').classList.remove('open'); renderTrash(); $('trashModal').style.display = 'flex'; },
+  'close-trash': () => $('trashModal').style.display = 'none',
+  'restore': t => restore(t.dataset.id), 'hard-delete': t => hardDelete(t.dataset.id),
+  'save-visual': saveVisualSettings, 'pick-bg': () => $('localBgUploader').click(),
+  'pick-history': async t => { try { await idb.del('bg'); } catch {} $('settingBgUrl').value = t.dataset.url; setBg(safeUrl(t.dataset.url)); showToast("Đã chọn ảnh từ lịch sử!"); },
+  'crop-close': closeCrop, 'crop-apply': applyCrop
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (t) { if (t.tagName === 'A') e.preventDefault(); if (t.dataset.act === 'trash') e.stopPropagation(); actions[t.dataset.act]?.(t); }
+  const f = e.target.closest('[data-fmt]');
+  if (f) { if (f.dataset.fmt === 'tab') document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'); else document.execCommand(f.dataset.fmt, false, null); editor.focus(); }
+  const sb = $('sidebar');
+  if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) sb.classList.remove('open');
+});
+$('openMenuBtn').addEventListener('click', () => $('sidebar').classList.add('open'));
+$('closeMenuBtn').addEventListener('click', () => $('sidebar').classList.remove('open'));
+$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
+$('settingTextColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-text-color', e.target.value));
+$('settingBtnColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-btn-color', e.target.value));
+$('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));
+$('fontSizeSlider').addEventListener('input', e => document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px'));
+['auth-email', 'auth-password'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); }));
+</script>
 </body>
 </html>
