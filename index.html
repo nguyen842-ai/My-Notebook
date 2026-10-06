@@ -229,10 +229,21 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
       <details class="menu-accordion">
         <summary>📂 Quản lý Thư mục <span>▾</span></summary>
         <div class="accordion-content">
-          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-            <input type="text" id="newFolderName" class="setting-input" placeholder="Tên Thư mục mới..." style="margin:0">
-            <input type="text" id="newFolderImage" class="setting-input" placeholder="Link ảnh bìa (URL)..." style="margin:0">
-            <button class="btn btn-full" data-act="new-folder" style="margin:0">Tạo Thư mục</button>
+          <details class="menu-accordion" style="margin-top:0">
+            <summary>➕ Tạo thư mục mới <span>▾</span></summary>
+            <div class="accordion-content" style="display:flex;flex-direction:column;gap:8px">
+              <input type="text" id="newFolderName" class="setting-input" placeholder="Tên Thư mục mới..." style="margin:0">
+              <input type="text" id="newFolderImage" class="setting-input" placeholder="Link ảnh bìa (URL)..." style="margin:0">
+              <button class="btn btn-full" data-act="new-folder" style="margin:0">Tạo Thư mục</button>
+            </div>
+          </details>
+          <div class="setting-item" style="flex-direction:column;align-items:flex-start;gap:4px;margin:16px 0 8px">
+            <label for="sortSelect">Sắp xếp file:</label>
+            <select id="sortSelect" class="folder-select" style="width:100%;margin:0">
+              <option value="updated-desc">Cập nhật gần nhất</option>
+              <option value="updated-asc">Cập nhật cũ nhất</option>
+              <option value="name">Theo tên (A → Z)</option>
+            </select>
           </div>
           <div id="folderSettingsList"></div>
         </div>
@@ -470,9 +481,17 @@ function renderSidebarSettings() {
   $('folderSettingsList').innerHTML = fs.length ? fs.map(f => `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`).join('')
     : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
 }
+let sortMode = localStorage.getItem('sortMode') || 'updated-desc';
+const sorters = {
+  'name': (a, b) => a.title.localeCompare(b.title, 'vi', { numeric: true, sensitivity: 'base' }),
+  'updated-desc': (a, b) => b.ts.localeCompare(a.ts),
+  'updated-asc': (a, b) => a.ts.localeCompare(b.ts)
+};
+const sortEntries = l => [...l].sort(sorters[sortMode] || sorters['updated-desc']);
 function buildTable(list) {
   if (!list.length) return '';
-  return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Ngày tạo</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` +
+  list = sortEntries(list);
+  return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Cập nhật</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` +
     list.map(e => `<tr data-act="open-entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
 }
 let viewEntries = []; // bài đã lọc theo tab hiện tại
@@ -484,7 +503,7 @@ function renderEntries() {
   for (const d of sorted) {
     if (d.status === 'trash') continue;
     if ((d.tabId || firstTab) !== currentTabId) continue;
-    const e = { id: d.id, title: d.title?.trim() || "Tài liệu không tên", dateStr: formatDate(d.createdAt), wCount: d.wordCount || 0, folderId: d.folderId };
+    const e = { id: d.id, title: d.title?.trim() || "Tài liệu không tên", ts: d.updatedAt || d.createdAt || '', dateStr: formatDate(d.updatedAt || d.createdAt), wCount: d.wordCount || 0, folderId: d.folderId };
     viewEntries.push(e); if (!d.folderId || !folderIds.has(d.folderId)) loose.push(e);
   }
   $('sidebarHistoryList').innerHTML = viewEntries.length
@@ -585,7 +604,7 @@ editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTim
 $('saveBtn').addEventListener('click', guard(async () => {
   const title = $('entryTitle').value.trim(), content = cleanHtml(editor.innerHTML.trim());
   if (!editor.textContent.trim() && !editor.querySelector('img')) return showToast("Bạn chưa viết nội dung!");
-  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), createdAt: $('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
+  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), updatedAt: new Date().toISOString(), createdAt: $('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
   const btn = $('saveBtn'); btn.disabled = true; btn.textContent = "Đang lưu...";
   try {
     if (currentEditingId) { await updateDoc(doc(db, "diaries", currentEditingId), data); Object.assign(entriesCache.find(e => e.id === currentEditingId), data); showToast("Đã cập nhật!"); }
@@ -672,6 +691,8 @@ document.addEventListener('click', e => {
   if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) sb.classList.remove('open');
 });
 $('openMenuBtn').addEventListener('click', () => $('sidebar').classList.add('open'));
+$('sortSelect').value = sortMode;
+$('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); });
 $('closeMenuBtn').addEventListener('click', () => $('sidebar').classList.remove('open'));
 $('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
 $('settingTextColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-text-color', e.target.value));
