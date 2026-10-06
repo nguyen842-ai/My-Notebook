@@ -1,3 +1,8 @@
+Chào bạn, đây là bản cập nhật mã nguồn theo đúng các yêu cầu của bạn:
+ * Lấy Tab đầu tiên làm Tab chính: Khi người dùng đăng nhập vào hoặc tải lại trang, hệ thống sẽ tự động chọn Tab đầu tiên (theo thứ tự sắp xếp) làm tab mặc định.
+ * Kéo thả Tabs: Bạn có thể giữ chuột vào một Tab trên thanh điều hướng để kéo nó sang vị trí mới, hệ thống sẽ tự động lưu lại thứ tự hiển thị của Tabs.
+ * Kéo thả Files (Di chuyển bài viết): Trên danh sách bảng, bạn có thể kéo thả một bài viết (file) và thả vào thẻ Thư mục để di chuyển file vào thư mục đó, hoặc thả vào một Tab khác trên thanh công cụ để chuyển bài viết đó sang Tab khác một cách nhanh chóng nhất.
+Dưới đây là toàn bộ mã nguồn đã được nâng cấp, bạn chỉ cần ghi đè vào file index.html của bạn:
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -140,6 +145,12 @@ body.editor-open .main-content{overflow:hidden}
 .crop-container{width:100%;max-width:600px;height:60vh;background:#222;border-radius:8px;overflow:hidden}
 .crop-actions{margin-top:24px;display:flex;gap:16px;width:100%;max-width:600px}
 .crop-img{max-width:100%;display:block}
+
+/* ---------- CSS Kéo thả (Drag & Drop) ---------- */
+.drag-over.folder-box { transform:scale(1.02); box-shadow:0 0 0 3px #fff, 0 12px 24px rgba(0,0,0,.3); filter:brightness(1.15) }
+.drag-over.btn[data-type="tab"] { opacity: 1; transform: translateY(-2px); box-shadow:inset 0 0 0 2px var(--user-text-color), 0 4px 12px rgba(0,0,0,.1) }
+tr[data-type="entry"] { cursor: grab }
+tr[data-type="entry"]:active { cursor: grabbing }
 
 /* Cho container giữ đúng chiều cao nội dung để vùng cuộn tính đủ độ dài (trừ lúc đang mở editor) */
 .main-content{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
@@ -334,10 +345,8 @@ const app = initializeApp({
   appId: "1:539808857702:web:bf074ecdde987bfcdc37a7"
 });
 const auth = getAuth(app);
-// Cache offline: lần mở sau gần như tức thì
-// file:// không có origin hợp lệ nên cache đa tab bị lỗi "Unsafe attempt to load URL"; chỉ bật khi chạy qua http(s)
 const isFile = location.protocol === 'file:';
-const dbOpts = { experimentalAutoDetectLongPolling: true }; // tự chuyển sang long-polling khi mạng chặn WebChannel
+const dbOpts = { experimentalAutoDetectLongPolling: true }; 
 if (!isFile) dbOpts.localCache = persistentLocalCache({ tabManager: persistentMultipleTabManager() });
 let db;
 try { db = initializeFirestore(app, dbOpts); }
@@ -357,10 +366,8 @@ const countText = t => { t = t.trim(); return t ? t.split(/\s+/).length : 0; };
 const htmlToText = h => { const d = document.createElement('div'); d.innerHTML = cleanHtml(h); return d.textContent || ''; };
 let toastTimer;
 function showToast(m) { const t = $('toast'); t.textContent = m; t.className = 'show'; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', 3000); }
-// Bọc thao tác bất đồng bộ: luôn báo lỗi cho người dùng
 const guard = (fn, msg = "Có lỗi xảy ra, vui lòng thử lại!") => async (...a) => { try { return await fn(...a); } catch (e) { console.error(e); showToast(msg); } };
 
-// IndexedDB cho ảnh nền (không chặn main thread như localStorage)
 const idb = {
   open: () => new Promise((res, rej) => { const r = indexedDB.open('notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
   async tx(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', mode); const q = fn(t.objectStore('kv')); t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); }); },
@@ -457,18 +464,29 @@ const userQ = col => getDocs(query(col, where("userId", "==", currentUser.uid)))
 async function loadCoreData() {
   if (!currentUser) return;
   const [, tabSnap, folderSnap, entrySnap] = await Promise.all([loadUserSettings(), userQ(tabsCol), userQ(foldersCol), userQ(diaryCol)]);
-  allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreated);
+  
+  // Sắp xếp Tab ưu tiên thuộc tính order (nếu có), nếu không dùng createdAt
+  allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
   allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreated);
   entriesCache = entrySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  if (!allTabs.length) { const createdAt = new Date().toISOString(); const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt }); allTabs.push({ id: r.id, name: "Chung", createdAt }); }
-  if (!allTabs.some(t => t.id === currentTabId)) currentTabId = allTabs[0].id;
+  
+  if (!allTabs.length) { 
+    const createdAt = new Date().toISOString(); 
+    const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt, order: 0 }); 
+    allTabs.push({ id: r.id, name: "Chung", createdAt, order: 0 }); 
+  }
+  
+  // LUÔN LẤY TAB ĐẦU TIÊN LÀM TAB CHÍNH KHI LOAD
+  currentTabId = allTabs[0].id;
+  
   renderAll();
 }
 function renderAll() { renderTabs(); renderFolderSelect(); renderSidebarSettings(); renderEntries(); }
 
 /* ---------- Render (không gọi mạng) ---------- */
 function renderTabs() {
-  $('tabsContainer').innerHTML = allTabs.map(t => `<button class="btn ${t.id === currentTabId ? 'active-tab' : ''}" data-act="switch-tab" data-id="${esc(t.id)}">${esc(t.name)}</button>`).join('');
+  // Thêm thuộc tính draggable và data-type="tab"
+  $('tabsContainer').innerHTML = allTabs.map(t => `<button class="btn ${t.id === currentTabId ? 'active-tab' : ''}" draggable="true" data-type="tab" data-id="${esc(t.id)}" data-act="switch-tab">${esc(t.name)}</button>`).join('');
 }
 function renderFolderSelect() {
   const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId);
@@ -491,8 +509,9 @@ const sortEntries = l => [...l].sort(sorters[sortMode] || sorters['updated-desc'
 function buildTable(list) {
   if (!list.length) return '';
   list = sortEntries(list);
+  // Thêm thuộc tính draggable và data-type="entry"
   return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Cập nhật</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` +
-    list.map(e => `<tr data-act="open-entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
+    list.map(e => `<tr data-act="open-entry" draggable="true" data-type="entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
 }
 let viewEntries = []; // bài đã lọc theo tab hiện tại
 function renderEntries() {
@@ -518,8 +537,10 @@ function renderEntries() {
 /* ---------- Tab / Thư mục ---------- */
 const createTab = guard(async () => {
   const name = $('newTabName').value.trim(); if (!name) return showToast("Vui lòng nhập tên Tab!");
-  const createdAt = new Date().toISOString(); const r = await addDoc(tabsCol, { userId: currentUser.uid, name, createdAt });
-  allTabs.push({ id: r.id, name, createdAt }); $('newTabName').value = ""; renderAll(); showToast("Đã tạo Tab mới!");
+  const createdAt = new Date().toISOString(); 
+  const order = allTabs.length;
+  const r = await addDoc(tabsCol, { userId: currentUser.uid, name, createdAt, order });
+  allTabs.push({ id: r.id, name, createdAt, order }); $('newTabName').value = ""; renderAll(); showToast("Đã tạo Tab mới!");
 });
 const editTab = guard(async id => {
   const t = allTabs.find(x => x.id === id), n = prompt("Nhập tên mới cho Tab:", t.name)?.trim(); if (!n) return;
@@ -539,7 +560,7 @@ const deleteTab = guard(async id => {
   renderAll(); showToast("Đã xóa Tab!");
 });
 const createFolder = guard(async () => {
-  const name = $('newFolderName').value.trim(), image = $('newFolderImage').value.trim(); if (!name) return showToast("Vui lòng nhập tên Thư mục!");
+  const name = $('newFolderName').value.trim(), image =$('newFolderImage').value.trim(); if (!name) return showToast("Vui lòng nhập tên Thư mục!");
   const createdAt = new Date().toISOString(); const r = await addDoc(foldersCol, { userId: currentUser.uid, tabId: currentTabId, name, image, createdAt });
   allFolders.push({ id: r.id, tabId: currentTabId, name, image, createdAt });
   $('newFolderName').value = ""; $('newFolderImage').value = ""; renderAll(); $('folderSelect').value = r.id; showToast("Đã tạo Thư mục!");
@@ -560,21 +581,20 @@ const editFolder = guard(async id => {
 let switching = false;
 function switchTab(id) {
   if (id === currentTabId || switching) return; switching = true;
-  currentTabId = id; closeEditor(); closeFolderView(); renderAll(); switching = false; // không còn gọi mạng
+  currentTabId = id; closeEditor(); closeFolderView(); renderAll(); switching = false;
 }
 
 /* ---------- Xem thư mục / Trình soạn thảo ---------- */
 function openFolderView(id) {
   const f = allFolders.find(x => x.id === id); if (!f) return;
   currentFolderViewId = id;
-  $('mainHeader').style.display = 'none'; $('mainBlogView').style.display = 'none'; $('editorView').style.display = 'none'; $('folderDetailView').style.display = 'flex';
+  $('mainHeader').style.display = 'none';$('mainBlogView').style.display = 'none'; $('editorView').style.display = 'none';$('folderDetailView').style.display = 'flex';
   $('folderDetailTitle').textContent = f.name; $('folderEntriesTable').innerHTML = buildTable(viewEntries.filter(e => e.folderId === id));
 }
-function closeFolderView() { currentFolderViewId = null; $('folderDetailView').style.display = 'none'; $('editorView').style.display = 'none'; $('mainHeader').style.display = 'block'; $('mainBlogView').style.display = 'flex'; }
+function closeFolderView() { currentFolderViewId = null; $('folderDetailView').style.display = 'none';$('editorView').style.display = 'none'; $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; }
 function showEditor() {
   $('sidebar').classList.remove('open');
-  ['mainHeader', 'mainBlogView', 'folderDetailView'].forEach(i => $(i).style.display = 'none');
-  $('editorView').style.display = 'flex'; document.body.classList.add('editor-open');
+  ['mainHeader', 'mainBlogView', 'folderDetailView'].forEach(i => $(i).style.display = 'none');$('editorView').style.display = 'flex'; document.body.classList.add('editor-open');
 }
 function setEditMode(on) {
   $('entryTitle').toggleAttribute('readonly', !on); editor.setAttribute('contenteditable', on);
@@ -589,12 +609,12 @@ function openEditor() {
 }
 function closeEditor() {
   currentEditingId = null; $('editorView').style.display = 'none'; document.body.classList.remove('editor-open');
-  if (currentFolderViewId) openFolderView(currentFolderViewId); else { $('mainHeader').style.display = 'block'; $('mainBlogView').style.display = 'flex'; }
+  if (currentFolderViewId) openFolderView(currentFolderViewId); else { $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; }
 }
 function editEntry(id) {
   const e = entriesCache.find(x => x.id === id); if (!e) return;
   $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content);
-  $('folderSelect').value = e.folderId || ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
+  $('folderSelect').value = e.folderId \vert{}\vert{} ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ";
   $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu";
   showEditor(); setEditMode(false);
 }
@@ -604,7 +624,7 @@ editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTim
 $('saveBtn').addEventListener('click', guard(async () => {
   const title = $('entryTitle').value.trim(), content = cleanHtml(editor.innerHTML.trim());
   if (!editor.textContent.trim() && !editor.querySelector('img')) return showToast("Bạn chưa viết nội dung!");
-  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), updatedAt: new Date().toISOString(), createdAt: $('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
+  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), updatedAt: new Date().toISOString(), createdAt:$('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
   const btn = $('saveBtn'); btn.disabled = true; btn.textContent = "Đang lưu...";
   try {
     if (currentEditingId) { await updateDoc(doc(db, "diaries", currentEditingId), data); Object.assign(entriesCache.find(e => e.id === currentEditingId), data); showToast("Đã cập nhật!"); }
@@ -620,7 +640,6 @@ $('textColorPicker').addEventListener('input', e => {
   editor.focus(); if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
   document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, e.target.value);
 });
-// Dán văn bản thuần: chặn ảnh và HTML độc hại
 editor.addEventListener('paste', e => {
   e.preventDefault();
   const text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -648,11 +667,7 @@ function loadCropper() {
     document.head.append(css, js);
   });
 }
-$('localBgUploader').addEventListener('change', guard(async e => {
-  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
-  await loadCropper();
-  const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
-  $('sidebar').classList.remove('open');
+$('localBgUploader').addEventListener('change', guard(async e => {   const file = e.target.files[0]; e.target.value = ''; if (!file) return;   await loadCropper();   const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });$('sidebar').classList.remove('open');
   const img = $('imageToCrop'); img.src = src; $('cropModal').style.display = 'flex';
   cropper?.destroy();
   cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false });
@@ -666,7 +681,99 @@ const applyCrop = guard(async () => {
   showToast("Đã áp dụng hình nền thành công!"); closeCrop();
 });
 
-/* ---------- Điều phối sự kiện (event delegation) ---------- */
+/* ---------- Xử lý sự kiện Kéo Thả (Drag & Drop) ---------- */
+let draggedItem = null;
+
+document.addEventListener('dragstart', e => {
+  const tab = e.target.closest('[data-type="tab"]');
+  if (tab) { draggedItem = { type: 'tab', id: tab.dataset.id, el: tab }; e.dataTransfer.effectAllowed = 'move'; }
+  const entry = e.target.closest('[data-type="entry"]');
+  if (entry) { draggedItem = { type: 'entry', id: entry.dataset.id, el: entry }; e.dataTransfer.effectAllowed = 'move'; }
+});
+
+document.addEventListener('dragover', e => {
+  if (!draggedItem) return;
+  e.preventDefault(); // Cho phép drop
+  
+  // Highlight UI nơi sắp được thả
+  if (draggedItem.type === 'tab') {
+    const dropTab = e.target.closest('[data-type="tab"]');
+    if (dropTab && dropTab !== draggedItem.el) dropTab.classList.add('drag-over');
+  }
+  if (draggedItem.type === 'entry') {
+    const folder = e.target.closest('.folder-box');
+    if (folder) folder.classList.add('drag-over');
+    const dropTab = e.target.closest('[data-type="tab"]');
+    if (dropTab) dropTab.classList.add('drag-over');
+  }
+});
+
+document.addEventListener('dragleave', e => {
+  if (!draggedItem) return;
+  const el = e.target.closest('.drag-over');
+  if (el) el.classList.remove('drag-over');
+});
+
+document.addEventListener('drop', async e => {
+  if (!draggedItem) return;
+  e.preventDefault();
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+  const type = draggedItem.type;
+  const itemId = draggedItem.id;
+
+  if (type === 'tab') {
+    const dropTab = e.target.closest('[data-type="tab"]');
+    if (dropTab && dropTab.dataset.id !== itemId) {
+      // Logic sắp xếp lại thứ tự Tab
+      const draggedIdx = allTabs.findIndex(t => t.id === itemId);
+      const dropIdx = allTabs.findIndex(t => t.id === dropTab.dataset.id);
+      const [removed] = allTabs.splice(draggedIdx, 1);
+      allTabs.splice(dropIdx, 0, removed);
+
+      renderTabs(); // Cập nhật UI ngay lập tức
+      const batch = writeBatch(db);
+      allTabs.forEach((t, i) => { t.order = i; batch.update(doc(db, "notebook_tabs", t.id), { order: i }); });
+      await batch.commit();
+      showToast("Đã cập nhật thứ tự Tab!");
+    }
+  }
+
+  if (type === 'entry') {
+    const folder = e.target.closest('.folder-box');
+    const tab = e.target.closest('[data-type="tab"]');
+    const entry = entriesCache.find(x => x.id === itemId);
+
+    if (entry) {
+      if (folder) {
+        // Thả bài viết vào thư mục
+        const fId = folder.dataset.id;
+        if (entry.folderId !== fId) {
+          entry.folderId = fId;
+          renderEntries();
+          try { await updateDoc(doc(db, "diaries", itemId), { folderId: fId }); showToast("Đã chuyển bài viết vào thư mục!"); } catch (err) { showToast("Lỗi di chuyển file!"); }
+        }
+      } else if (tab) {
+        // Thả bài viết sang tab khác
+        const tId = tab.dataset.id;
+        if (entry.tabId !== tId || entry.folderId) {
+          entry.tabId = tId;
+          entry.folderId = null; // Bỏ khỏi thư mục cũ nếu di chuyển sang tab mới
+          renderEntries();
+          try { await updateDoc(doc(db, "diaries", itemId), { tabId: tId, folderId: null }); showToast("Đã chuyển bài viết sang Tab mới!"); } catch (err) { showToast("Lỗi di chuyển file!"); }
+        }
+      }
+    }
+  }
+  draggedItem = null;
+});
+
+document.addEventListener('dragend', () => {
+  draggedItem = null;
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+});
+
+/* ---------- Điều phối sự kiện click ---------- */
 const actions = {
   'auth': handleAuth, 'auth-toggle': toggleAuth, 'auth-forgot': handleForgot,
   'logout': () => { if (confirm("Bạn có chắc muốn đăng xuất?")) signOut(auth); },
@@ -675,7 +782,7 @@ const actions = {
   'new-folder': createFolder, 'edit-folder': t => editFolder(t.dataset.id), 'delete-folder': t => deleteFolder(t.dataset.id),
   'open-folder': t => openFolderView(t.dataset.id), 'close-folder': closeFolderView,
   'open-entry': t => editEntry(t.dataset.id), 'trash': t => moveToTrash(t.dataset.id),
-  'open-trash': () => { $('sidebar').classList.remove('open'); renderTrash(); $('trashModal').style.display = 'flex'; },
+  'open-trash': () => { $('sidebar').classList.remove('open'); renderTrash();$('trashModal').style.display = 'flex'; },
   'close-trash': () => $('trashModal').style.display = 'none',
   'restore': t => restore(t.dataset.id), 'hard-delete': t => hardDelete(t.dataset.id),
   'save-visual': saveVisualSettings, 'pick-bg': () => $('localBgUploader').click(),
@@ -690,15 +797,10 @@ document.addEventListener('click', e => {
   const sb = $('sidebar');
   if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) sb.classList.remove('open');
 });
-$('openMenuBtn').addEventListener('click', () => $('sidebar').classList.add('open'));
-$('sortSelect').value = sortMode;
-$('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); });
-$('closeMenuBtn').addEventListener('click', () => $('sidebar').classList.remove('open'));
-$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
-$('settingTextColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-text-color', e.target.value));
-$('settingBtnColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-btn-color', e.target.value));
-$('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));
-$('fontSizeSlider').addEventListener('input', e => document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px'));
+$('openMenuBtn').addEventListener('click', () => $('sidebar').classList.add('open'));$('sortSelect').value = sortMode;
+$('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); });$('closeMenuBtn').addEventListener('click', () => $('sidebar').classList.remove('open'));$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
+$('settingTextColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-text-color', e.target.value));$('settingBtnColor').addEventListener('input', e => document.documentElement.style.setProperty('--user-btn-color', e.target.value));
+$('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));$('fontSizeSlider').addEventListener('input', e => document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px'));
 ['auth-email', 'auth-password'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); }));
 </script>
 </body>
