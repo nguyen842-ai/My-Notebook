@@ -94,7 +94,11 @@ body.editor-open .main-content{overflow:hidden}
 .tabs-container .btn{padding:8px 24px;border-radius:6px;opacity:.7}
 .tabs-container .btn.active-tab{opacity:1;box-shadow:inset 0 0 0 2px var(--user-text-color)}
 .folder-grid{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:48px}
-.folder-box{position:relative;overflow:hidden;width:calc(25% - 24px);min-width:160px;min-height:140px;border-radius:16px;border:1px solid var(--color-soft-mist);cursor:pointer;transition:.2s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background-size:cover;background-position:center;background-color:var(--user-btn-color)}
+.folder-box{position:relative;overflow:hidden;width:calc(25% - 24px);min-width:160px;min-height:140px;border-radius:16px;border:1px solid var(--color-soft-mist);cursor:pointer;transition:.2s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background-size:cover;background-position:center;background-color:var(--user-btn-color);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 .folder-box:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.1)}
 .folder-box::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),transparent 80%);pointer-events:none}
 .folder-name{position:relative;z-index:2;font-size:18px;font-weight:600;color:#fff;line-height:1.3;text-shadow:1px 1px 4px rgba(0,0,0,.9)}
@@ -152,7 +156,7 @@ tr[data-type="entry"]:active { cursor: grabbing }
 
 body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 @media (max-width:768px){
-  .container{margin-bottom:32px}
+  .container{margin-bottom:0; padding-bottom: 150px !important;}
   .main-content{padding:calc(max(env(safe-area-inset-top),24px) + 16px) max(env(safe-area-inset-right),16px) calc(max(env(safe-area-inset-bottom),24px) + 80px) max(env(safe-area-inset-left),16px)}
   #openMenuBtn{top:calc(max(env(safe-area-inset-top),24px) + 16px);right:16px;width:44px;height:44px}
   .diary-title{font-size:32px;margin:0 0 24px;min-height:44px;display:flex;align-items:center;padding-right:56px}
@@ -165,8 +169,11 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 }
 </style>
 <script>if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode');</script>
+<!-- Thêm dòng này để hỗ trợ kéo thả trên màn hình cảm ứng -->
+<script src="https://unpkg.com/drag-drop-touch@1.0.2/DragDropTouch.js" defer></script>
 </head>
 <body>
+
 <div class="bg-overlay"></div>
 
 <div id="startup-loader"><div class="loader-container"><div class="loader"></div><div class="loader"></div><div class="loader"></div></div></div>
