@@ -141,16 +141,33 @@ body.editor-open .main-content{overflow:hidden}
 
 /* ---------- CSS Kéo thả (Drag & Drop) Native ---------- */
 .btn[data-type="tab"], tr[data-type="entry"], .folder-box {
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none;
   cursor: grab;
 }
-.btn[data-type="tab"]:active, tr[data-type="entry"]:active, .folder-box:active {
+.btn[data-type="tab"]:active, tr[data-type="entry"]:active {
   cursor: grabbing;
 }
 .drag-over.folder-box { transform:scale(1.02); box-shadow:0 0 0 3px #fff, 0 12px 24px rgba(0,0,0,.3); filter:brightness(1.15) }
 .drag-over.btn[data-type="tab"] { opacity: 1; transform: translateY(-2px); box-shadow:inset 0 0 0 2px var(--user-text-color), 0 4px 12px rgba(0,0,0,.1) }
+
+/* --- CSS CHẾ ĐỘ CHỈNH SỬA (JIGGLE MODE) --- */
+@keyframes jiggle {
+  0% { transform: rotate(-1.5deg) scale(1.02); }
+  50% { transform: rotate(1.5deg) scale(1.02); }
+  100% { transform: rotate(-1.5deg) scale(1.02); }
+}
+.folder-grid.is-editing .folder-box {
+  animation: jiggle 0.35s infinite ease-in-out;
+  cursor: grab !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.folder-grid.is-editing .folder-box:active {
+  cursor: grabbing !important;
+  animation: none;
+  transform: scale(1.08);
+}
 
 body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 @media (max-width:768px){
@@ -166,7 +183,7 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
   .crop-container{height:50vh}
 }
 </style>
-<script>if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode');</script>
+<script>try { if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode'); } catch(e){}</script>
 <!-- Thư viện DragDropTouch giúp iOS nhận diện HTML5 Drag/Drop -->
 <script src="https://unpkg.com/drag-drop-touch@1.0.2/DragDropTouch.js" defer></script>
 </head>
@@ -418,7 +435,15 @@ async function handleAuth() {
   if (!email || !pw) return showAuthMsg("Vui lòng nhập Email và Mật khẩu!", "error");
   btnLogin.disabled = true; btnLogin.textContent = "Đang xử lý...";
   try { await (isLoginMode ? signInWithEmailAndPassword : createUserWithEmailAndPassword)(auth, email, pw); } 
-  catch (e) { showAuthMsg({ 'auth/email-already-in-use': "Email đã dùng!", 'auth/invalid-credential': "Sai email/pass!", 'auth/weak-password': "Mật khẩu >= 6 ký tự!" }[e.code] || "Lỗi. Vui lòng thử lại!", "error"); } 
+  catch (e) { 
+    console.error("Lỗi Auth: ", e);
+    showAuthMsg({ 
+      'auth/email-already-in-use': "Email đã dùng!", 
+      'auth/invalid-credential': "Sai email/mật khẩu!", 
+      'auth/weak-password': "Mật khẩu >= 6 ký tự!",
+      'auth/operation-not-allowed': "Tài khoản Email/Password chưa bật trong Firebase!"
+    }[e.code] || ("Lỗi: " + e.message), "error"); 
+  } 
   finally { resetLoginBtn(); }
 }
 async function handleForgot() {
@@ -439,7 +464,11 @@ onAuthStateChanged(auth, async user => {
   if (loader) { setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 450); }, Math.max(0, LOADER_MIN - (Date.now() - loaderStart))); }
 });
 
-function setDark(on) { document.body.classList.toggle('dark-mode', on); document.documentElement.classList.toggle('dark-mode', on); localStorage.setItem('savedDarkMode', on); }
+function setDark(on) { 
+  document.body.classList.toggle('dark-mode', on); 
+  document.documentElement.classList.toggle('dark-mode', on); 
+  try { localStorage.setItem('savedDarkMode', on); } catch(e){} 
+}
 function setTitle(t) { const v = t.trim() || "My Notebook"; document.title = v; document.querySelectorAll('.app-title-display').forEach(el => el.textContent = v); }
 function setBg(url) { document.body.style.backgroundImage = url ? `url("${url}")` : "none"; document.body.dataset.hasBg = url ? "true" : "false"; }
 async function applyBackground() {
@@ -488,7 +517,8 @@ function renderSidebarSettings() {
   $('folderSettingsList').innerHTML = fs.length ? fs.map(f => `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`).join('') : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
 }
 
-let sortMode = localStorage.getItem('sortMode') || 'updated-desc';
+let sortMode = 'updated-desc';
+try { sortMode = localStorage.getItem('sortMode') || 'updated-desc'; } catch(e){}
 const sorters = { 'name': (a, b) => a.title.localeCompare(b.title, 'vi', { numeric: true, sensitivity: 'base' }), 'updated-desc': (a, b) => b.ts.localeCompare(a.ts), 'updated-asc': (a, b) => a.ts.localeCompare(b.ts) };
 const sortEntries = l => [...l].sort(sorters[sortMode] || sorters['updated-desc']);
 function buildTable(list) {
@@ -511,7 +541,6 @@ function renderEntries() {
   
   $('sidebarHistoryList').innerHTML = viewEntries.length ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('') : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
   
-  // NÂNG CẤP: Gắn cờ draggable và data-type='folder' để nhận diện Drag & Drop
   $('folderGrid').innerHTML = tabFolders.map(f => { 
     const img = safeUrl(f.image); 
     return `<div class="folder-box" draggable="true" data-type="folder" ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
@@ -556,7 +585,7 @@ function editEntry(id) {
   const e = entriesCache.find(x => x.id === id); if (!e) return;
   $('entryTitle').value = e.title || ""; 
   editor.innerHTML = cleanHtml(e.content); 
-  $('folderSelect').value = e.folderId || ""; // <-- Sửa tại đây
+  $('folderSelect').value = e.folderId || "";
   $('liveWordCount').textContent = countText(editor.textContent) + " từ"; 
   $('entryDate').value = toLocalInput(e.createdAt); 
   currentEditingId = id; 
@@ -564,7 +593,6 @@ function editEntry(id) {
   showEditor(); 
   setEditMode(false);
 }
-
 
 let wcTimer; editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTimeout(() => $('liveWordCount').textContent = countText(editor.textContent) + " từ", 200); });
 $('saveBtn').addEventListener('click', guard(async () => {
@@ -599,17 +627,48 @@ const applyCrop = guard(async () => {
   await idb.set('bg', blob); $('settingBgUrl').value = ''; await applyBackground(); showToast("Đã áp dụng hình nền thành công!"); closeCrop();
 });
 
-/* ---------- XỬ LÝ KÉO THẢ NATIVE + POLYFILL (NÂNG CẤP) ---------- */
+// --- XỬ LÝ NHẤN GIỮ 0.5S (JIGGLE MODE) ---
+let pressTimer = null;
+let isEditMode = false;
+
+document.addEventListener('pointerdown', e => {
+  const folder = e.target.closest('.folder-box');
+  
+  if (isEditMode && !folder && !e.target.closest('[data-type="tab"]')) {
+    isEditMode = false;
+    document.getElementById('folderGrid').classList.remove('is-editing');
+    showToast("Đã lưu vị trí!");
+    return;
+  }
+  
+  if (folder && !isEditMode) {
+    pressTimer = setTimeout(() => {
+      isEditMode = true;
+      document.getElementById('folderGrid').classList.add('is-editing');
+      showToast("Chế độ chỉnh sửa: Kéo thả để đổi vị trí!");
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+  }
+});
+const cancelPress = () => clearTimeout(pressTimer);
+document.addEventListener('pointerup', cancelPress);
+document.addEventListener('pointermove', cancelPress);
+document.addEventListener('pointercancel', cancelPress);
+
+/* ---------- XỬ LÝ KÉO THẢ NATIVE + POLYFILL ---------- */
 let draggedItem = null;
 
 document.addEventListener('dragstart', e => {
+  const folder = e.target.closest('[data-type="folder"]');
+  if (folder && !isEditMode) {
+    e.preventDefault(); 
+    return;
+  }
+
   const tab = e.target.closest('[data-type="tab"]');
   if (tab) { draggedItem = { type: 'tab', id: tab.dataset.id, el: tab }; e.dataTransfer.effectAllowed = 'move'; }
   const entry = e.target.closest('[data-type="entry"]');
   if (entry) { draggedItem = { type: 'entry', id: entry.dataset.id, el: entry }; e.dataTransfer.effectAllowed = 'move'; }
-  
-  // MỚI: Nhận diện kéo thư mục
-  const folder = e.target.closest('[data-type="folder"]');
   if (folder) { draggedItem = { type: 'folder', id: folder.dataset.id, el: folder }; e.dataTransfer.effectAllowed = 'move'; }
 });
 
@@ -627,7 +686,6 @@ document.addEventListener('dragover', e => {
     const dropTab = e.target.closest('[data-type="tab"]');
     if (dropTab) dropTab.classList.add('drag-over');
   }
-  // MỚI: Hiệu ứng hover khi đổi chỗ thư mục
   if (draggedItem.type === 'folder') {
     const dropFolder = e.target.closest('[data-type="folder"]');
     if (dropFolder && dropFolder !== draggedItem.el) dropFolder.classList.add('drag-over');
@@ -636,7 +694,7 @@ document.addEventListener('dragover', e => {
 
 document.addEventListener('dragleave', e => {
   if (!draggedItem) return;
-  const el = e.target.closest('.drag-over');
+  const el = e.target.closest && e.target.closest('.drag-over');
   if (el) el.classList.remove('drag-over');
 });
 
@@ -662,7 +720,6 @@ document.addEventListener('drop', async e => {
     }
   }
 
-  // MỚI: Xử lý đổi chỗ Thư mục
   if (type === 'folder') {
     const dropFolder = e.target.closest('[data-type="folder"]');
     if (dropFolder && dropFolder.dataset.id !== itemId) {
@@ -674,7 +731,6 @@ document.addEventListener('drop', async e => {
       const batch = writeBatch(db);
       allFolders.forEach((f, i) => { f.order = i; batch.update(doc(db, "notebook_folders", f.id), { order: i }); });
       await batch.commit();
-      showToast("Đã cập nhật vị trí thư mục!");
     }
   }
 
@@ -713,7 +769,8 @@ const actions = {
   'new-entry': openEditor, 'close-editor': closeEditor, 'edit-mode': () => setEditMode(true),
   'switch-tab': t => switchTab(t.dataset.id), 'new-tab': createTab, 'edit-tab': t => editTab(t.dataset.id), 'delete-tab': t => deleteTab(t.dataset.id),
   'new-folder': createFolder, 'edit-folder': t => editFolder(t.dataset.id), 'delete-folder': t => deleteFolder(t.dataset.id),
-  'open-folder': t => openFolderView(t.dataset.id), 'close-folder': closeFolderView,
+  'open-folder': t => { if (!isEditMode) openFolderView(t.dataset.id); },
+  'close-folder': closeFolderView,
   'open-entry': t => editEntry(t.dataset.id), 'trash': t => moveToTrash(t.dataset.id),
   'open-trash': () => { $('sidebar').classList.remove('open'); renderTrash();$('trashModal').style.display = 'flex'; },
   'close-trash': () => $('trashModal').style.display = 'none', 'restore': t => restore(t.dataset.id), 'hard-delete': t => hardDelete(t.dataset.id),
@@ -730,7 +787,8 @@ document.addEventListener('click', e => {
   const sb = $('sidebar'); if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) { sb.classList.remove('open'); }
 });
 
-$('openMenuBtn').addEventListener('click', () =>$('sidebar').classList.add('open'));$('closeMenuBtn').addEventListener('click', () =>$('sidebar').classList.remove('open'));$('sortSelect').value = sortMode; $('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); });$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
+$('openMenuBtn').addEventListener('click', () =>$('sidebar').classList.add('open'));$('closeMenuBtn').addEventListener('click', () =>$('sidebar').classList.remove('open'));$('sortSelect').value = sortMode;
+try { $('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); }); } catch(e){}$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
 $('settingTextColor').addEventListener('input', e => { document.documentElement.style.setProperty('--user-text-color', e.target.value); });$('settingBtnColor').addEventListener('input', e => { document.documentElement.style.setProperty('--user-btn-color', e.target.value); });
 $('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));$('fontSizeSlider').addEventListener('input', e => { document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px'); });
 ['auth-email', 'auth-password'].forEach(i => { $(i).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); }); });
