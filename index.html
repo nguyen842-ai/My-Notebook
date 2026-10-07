@@ -94,11 +94,7 @@ body.editor-open .main-content{overflow:hidden}
 .tabs-container .btn{padding:8px 24px;border-radius:6px;opacity:.7}
 .tabs-container .btn.active-tab{opacity:1;box-shadow:inset 0 0 0 2px var(--user-text-color)}
 .folder-grid{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:48px}
-.folder-box{position:relative;overflow:hidden;width:calc(25% - 24px);min-width:160px;min-height:140px;border-radius:16px;border:1px solid var(--color-soft-mist);cursor:pointer;transition:.2s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background-size:cover;background-position:center;background-color:var(--user-btn-color);
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
+.folder-box{position:relative;overflow:hidden;width:calc(25% - 24px);min-width:160px;min-height:140px;border-radius:16px;border:1px solid var(--color-soft-mist);cursor:pointer;transition:.2s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;background-size:cover;background-position:center;background-color:var(--user-btn-color)}
 .folder-box:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.1)}
 .folder-box::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),transparent 80%);pointer-events:none}
 .folder-name{position:relative;z-index:2;font-size:18px;font-weight:600;color:#fff;line-height:1.3;text-shadow:1px 1px 4px rgba(0,0,0,.9)}
@@ -143,16 +139,18 @@ body.editor-open .main-content{overflow:hidden}
 .crop-actions{margin-top:24px;display:flex;gap:16px;width:100%;max-width:600px}
 .crop-img{max-width:100%;display:block}
 
-/* ---------- CSS Kéo thả (Drag & Drop) ---------- */
-.btn[data-type="tab"], tr[data-type="entry"] {
+/* ---------- CSS Kéo thả (Drag & Drop) Native ---------- */
+.btn[data-type="tab"], tr[data-type="entry"], .folder-box {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  cursor: grab;
+}
+.btn[data-type="tab"]:active, tr[data-type="entry"]:active, .folder-box:active {
+  cursor: grabbing;
 }
 .drag-over.folder-box { transform:scale(1.02); box-shadow:0 0 0 3px #fff, 0 12px 24px rgba(0,0,0,.3); filter:brightness(1.15) }
 .drag-over.btn[data-type="tab"] { opacity: 1; transform: translateY(-2px); box-shadow:inset 0 0 0 2px var(--user-text-color), 0 4px 12px rgba(0,0,0,.1) }
-tr[data-type="entry"] { cursor: grab }
-tr[data-type="entry"]:active { cursor: grabbing }
 
 body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 @media (max-width:768px){
@@ -169,7 +167,7 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 }
 </style>
 <script>if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode');</script>
-<!-- Thêm dòng này để hỗ trợ kéo thả trên màn hình cảm ứng -->
+<!-- Thư viện DragDropTouch giúp iOS nhận diện HTML5 Drag/Drop -->
 <script src="https://unpkg.com/drag-drop-touch@1.0.2/DragDropTouch.js" defer></script>
 </head>
 <body>
@@ -335,7 +333,6 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 <div id="toast" role="status">Thông báo</div>
 
 <script type="module">
-// Thêm cảnh báo khi dán code hoặc lỗi mạng gây đứng màn hình Loading
 window.addEventListener("error", function(e) {
   const loader = document.getElementById('startup-loader');
   if(loader) loader.style.display = 'none';
@@ -370,23 +367,16 @@ const dbOpts = { experimentalAutoDetectLongPolling: true };
 if (!isFile) dbOpts.localCache = persistentLocalCache({ tabManager: persistentMultipleTabManager() });
 
 let db;
-try { 
-  db = initializeFirestore(app, dbOpts); 
-} catch (e) { 
-  try {
-    db = getFirestore(app);
-  } catch(err) {
-    db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); 
-  }
+try { db = initializeFirestore(app, dbOpts); } catch (e) { 
+  try { db = getFirestore(app); } catch(err) { db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
 }
 
-if (isFile) console.warn("Đang mở bằng file://. Hãy chạy qua http://localhost hoặc Firebase Hosting để Firestore hoạt động ổn định.");
+if (isFile) console.warn("Đang mở bằng file://.");
 
 const diaryCol = collection(db, "diaries");
 const tabsCol = collection(db, "notebook_tabs");
 const foldersCol = collection(db, "notebook_folders");
 
-/* ---------- Tiện ích ---------- */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^(https?:|data:image\/)/i.test(u || '') ? u : '';
@@ -397,43 +387,19 @@ const countText = t => { t = t.trim(); return t ? t.split(/\s+/).length : 0; };
 
 let toastTimer;
 function showToast(m) { 
-  const t = $('toast'); 
-  t.textContent = m; 
-  t.className = 'show'; 
-  clearTimeout(toastTimer); 
-  toastTimer = setTimeout(() => t.className = '', 3000); 
+  const t = $('toast'); t.textContent = m; t.className = 'show'; 
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', 3000); 
 }
-const guard = (fn, msg = "Có lỗi xảy ra, vui lòng thử lại!") => async (...a) => { 
-  try { 
-    return await fn(...a); 
-  } catch (e) { 
-    console.error(e); 
-    showToast(msg); 
-  } 
-};
+const guard = (fn, msg = "Có lỗi xảy ra!") => async (...a) => { try { return await fn(...a); } catch (e) { console.error(e); showToast(msg); } };
 
 const idb = {
-  open: () => new Promise((res, rej) => { 
-    const r = indexedDB.open('notebook', 1); 
-    r.onupgradeneeded = () => r.result.createObjectStore('kv'); 
-    r.onsuccess = () => res(r.result); 
-    r.onerror = () => rej(r.error); 
-  }),
-  async tx(mode, fn) { 
-    const d = await this.open(); 
-    return new Promise((res, rej) => { 
-      const t = d.transaction('kv', mode); 
-      const q = fn(t.objectStore('kv')); 
-      t.oncomplete = () => res(q.result); 
-      t.onerror = () => rej(t.error); 
-    }); 
-  },
+  open: () => new Promise((res, rej) => { const r = indexedDB.open('notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async tx(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', mode); const q = fn(t.objectStore('kv')); t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); }); },
   get(k) { return this.tx('readonly', s => s.get(k)); },
   set(k, v) { return this.tx('readwrite', s => s.put(v, k)); },
   del(k) { return this.tx('readwrite', s => s.delete(k)); }
 };
 
-/* ---------- Trạng thái ---------- */
 let currentUser = null, isLoginMode = true;
 let settings = { bgUrl: "", isDark: false, fontSize: "16", recentImages: [], appTitle: "My Notebook", textColor: "#292827", btnColor: "#421d24" };
 let allTabs = [], allFolders = [], entriesCache = [];
@@ -441,592 +407,190 @@ let currentTabId = null, currentFolderViewId = null, currentEditingId = null, bg
 const editor = $('diaryEditor');
 const loaderStart = Date.now(), LOADER_MIN = 700;
 
-/* ---------- Auth ---------- */
 const btnLogin = $('btn-login');
 const authMsg = $('auth-message');
 
-const resetLoginBtn = () => { 
-  btnLogin.disabled = false; 
-  btnLogin.textContent = isLoginMode ? "Đăng Nhập" : "Tạo Tài Khoản Mới"; 
-};
-
-function showAuthMsg(m, type) { 
-  authMsg.textContent = m; 
-  authMsg.className = "auth-msg " + type; 
-  authMsg.style.display = "block"; 
-}
+const resetLoginBtn = () => { btnLogin.disabled = false; btnLogin.textContent = isLoginMode ? "Đăng Nhập" : "Tạo Tài Khoản Mới"; };
+function showAuthMsg(m, type) { authMsg.textContent = m; authMsg.className = "auth-msg " + type; authMsg.style.display = "block"; }
 
 async function handleAuth() {
-  const email = $('auth-email').value.trim();
-  const pw = $('auth-password').value.trim();
+  const email = $('auth-email').value.trim(), pw = $('auth-password').value.trim();
   if (!email || !pw) return showAuthMsg("Vui lòng nhập Email và Mật khẩu!", "error");
-  btnLogin.disabled = true; 
-  btnLogin.textContent = "Đang xử lý...";
-  try { 
-    await (isLoginMode ? signInWithEmailAndPassword : createUserWithEmailAndPassword)(auth, email, pw); 
-  } catch (e) {
-    showAuthMsg({ 'auth/email-already-in-use': "Email này đã được đăng ký!", 'auth/invalid-credential': "Sai email hoặc mật khẩu!", 'auth/weak-password': "Mật khẩu phải có ít nhất 6 ký tự!" }[e.code] || "Lỗi. Vui lòng thử lại!", "error");
-  } finally { 
-    resetLoginBtn(); 
-  }
+  btnLogin.disabled = true; btnLogin.textContent = "Đang xử lý...";
+  try { await (isLoginMode ? signInWithEmailAndPassword : createUserWithEmailAndPassword)(auth, email, pw); } 
+  catch (e) { showAuthMsg({ 'auth/email-already-in-use': "Email đã dùng!", 'auth/invalid-credential': "Sai email/pass!", 'auth/weak-password': "Mật khẩu >= 6 ký tự!" }[e.code] || "Lỗi. Vui lòng thử lại!", "error"); } 
+  finally { resetLoginBtn(); }
 }
-
 async function handleForgot() {
-  const email = $('auth-email').value.trim(); 
-  if (!email) return showAuthMsg("Vui lòng nhập Email để nhận link!", "error");
-  try { 
-    await sendPasswordResetEmail(auth, email); 
-    showAuthMsg("Đã gửi email khôi phục mật khẩu!", "success"); 
-  } catch { 
-    showAuthMsg("Lỗi: Không tìm thấy tài khoản.", "error"); 
-  }
+  const email = $('auth-email').value.trim(); if (!email) return showAuthMsg("Vui lòng nhập Email!", "error");
+  try { await sendPasswordResetEmail(auth, email); showAuthMsg("Đã gửi email khôi phục!", "success"); } catch { showAuthMsg("Lỗi: Không tìm thấy tài khoản.", "error"); }
 }
-
 function toggleAuth() {
-  isLoginMode = !isLoginMode; 
-  resetLoginBtn();
+  isLoginMode = !isLoginMode; resetLoginBtn();
   document.querySelector('.auth-switch').textContent = isLoginMode ? "Chưa có tài khoản? Đăng ký ngay" : "Đã có tài khoản? Đăng nhập";
   authMsg.style.display = "none";
 }
 
 onAuthStateChanged(auth, async user => {
   currentUser = user;
-  if (user) { 
-    $('auth-screen').style.display = 'none'; 
-    $('main-app').style.display = 'block'; 
-    await guard(loadCoreData)(); 
-  } else { 
-    resetLoginBtn(); 
-    $('auth-screen').style.display = 'flex'; 
-    $('main-app').style.display = 'none'; 
-  }
+  if (user) { $('auth-screen').style.display = 'none'; $('main-app').style.display = 'block'; await guard(loadCoreData)(); } 
+  else { resetLoginBtn(); $('auth-screen').style.display = 'flex'; $('main-app').style.display = 'none'; }
   const loader = $('startup-loader');
-  if (loader) {
-    setTimeout(() => { 
-      loader.style.opacity = '0'; 
-      setTimeout(() => loader.remove(), 450); 
-    }, Math.max(0, LOADER_MIN - (Date.now() - loaderStart)));
-  }
+  if (loader) { setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 450); }, Math.max(0, LOADER_MIN - (Date.now() - loaderStart))); }
 });
 
-/* ---------- Giao diện / Cài đặt ---------- */
-function setDark(on) { 
-  document.body.classList.toggle('dark-mode', on); 
-  document.documentElement.classList.toggle('dark-mode', on); 
-  localStorage.setItem('savedDarkMode', on); 
-}
-function setTitle(t) { 
-  const v = t.trim() || "My Notebook"; 
-  document.title = v; 
-  document.querySelectorAll('.app-title-display').forEach(el => el.textContent = v); 
-}
-function setBg(url) { 
-  document.body.style.backgroundImage = url ? `url("${url}")` : "none"; 
-  document.body.dataset.hasBg = url ? "true" : "false"; 
-}
-
+function setDark(on) { document.body.classList.toggle('dark-mode', on); document.documentElement.classList.toggle('dark-mode', on); localStorage.setItem('savedDarkMode', on); }
+function setTitle(t) { const v = t.trim() || "My Notebook"; document.title = v; document.querySelectorAll('.app-title-display').forEach(el => el.textContent = v); }
+function setBg(url) { document.body.style.backgroundImage = url ? `url("${url}")` : "none"; document.body.dataset.hasBg = url ? "true" : "false"; }
 async function applyBackground() {
-  let blob = null; 
-  try { blob = await idb.get('bg'); } catch {}
-  if (blob) { 
-    if (bgObjectUrl) URL.revokeObjectURL(bgObjectUrl); 
-    bgObjectUrl = URL.createObjectURL(blob); 
-    setBg(bgObjectUrl); 
-  } else {
-    setBg(safeUrl(settings.bgUrl));
-  }
+  let blob = null; try { blob = await idb.get('bg'); } catch {}
+  if (blob) { if (bgObjectUrl) URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = URL.createObjectURL(blob); setBg(bgObjectUrl); } else { setBg(safeUrl(settings.bgUrl)); }
 }
-
-function renderImageHistory() {
-  $('imageHistoryGrid').innerHTML = (settings.recentImages || []).filter(safeUrl).map(u => 
-    `<div class="history-img-box" style="background-image:url('${esc(encodeURI(u))}')" data-act="pick-history" data-url="${esc(u)}" title="${esc(u)}"></div>`
-  ).join('');
-}
-
+function renderImageHistory() { $('imageHistoryGrid').innerHTML = (settings.recentImages || []).filter(safeUrl).map(u => `<div class="history-img-box" style="background-image:url('${esc(encodeURI(u))}')" data-act="pick-history" data-url="${esc(u)}" title="${esc(u)}"></div>`).join(''); }
 function applySettingsToUI() {
-  $('settingBgUrl').value = settings.bgUrl || "";
-  $('darkModeToggle').checked = settings.isDark; 
-  setDark(settings.isDark);
-  document.documentElement.style.setProperty('--editor-fs', (settings.fontSize || "16") + 'px');
-  $('fontSizeSlider').value = settings.fontSize || "16";
-  const t = settings.appTitle || "My Notebook"; 
-  $('settingAppTitle').value = t === "My Notebook" ? "" : t; 
-  setTitle(t);
-  $('settingTextColor').value = settings.textColor; 
-  $('settingBtnColor').value = settings.btnColor;
-  document.documentElement.style.setProperty('--user-text-color', settings.textColor);
-  document.documentElement.style.setProperty('--user-btn-color', settings.btnColor);
-  renderImageHistory(); 
-  applyBackground();
+  $('settingBgUrl').value = settings.bgUrl || ""; $('darkModeToggle').checked = settings.isDark; setDark(settings.isDark);
+  document.documentElement.style.setProperty('--editor-fs', (settings.fontSize || "16") + 'px'); $('fontSizeSlider').value = settings.fontSize || "16";
+  const t = settings.appTitle || "My Notebook"; $('settingAppTitle').value = t === "My Notebook" ? "" : t; setTitle(t);
+  $('settingTextColor').value = settings.textColor; $('settingBtnColor').value = settings.btnColor;
+  document.documentElement.style.setProperty('--user-text-color', settings.textColor); document.documentElement.style.setProperty('--user-btn-color', settings.btnColor);
+  renderImageHistory(); applyBackground();
 }
-
-async function loadUserSettings() {
-  try { 
-    const s = await getDoc(doc(db, "user_settings", currentUser.uid)); 
-    if (s.exists()) settings = { ...settings, ...s.data() }; 
-  } catch (e) { 
-    console.warn("Lỗi tải cài đặt", e); 
-  }
-  applySettingsToUI();
-}
-
+async function loadUserSettings() { try { const s = await getDoc(doc(db, "user_settings", currentUser.uid)); if (s.exists()) settings = { ...settings, ...s.data() }; } catch (e) {} applySettingsToUI(); }
 const saveVisualSettings = guard(async () => {
   const bg = $('settingBgUrl').value.trim();
-  if (bg) {
-    settings.recentImages = [bg, ...(settings.recentImages || []).filter(u => u !== bg)].slice(0, 10);
-    try { await idb.del('bg'); } catch {}
-  }
-  settings = { 
-    ...settings, 
-    bgUrl: bg, 
-    isDark: $('darkModeToggle').checked, 
-    fontSize: $('fontSizeSlider').value, 
-    appTitle: $('settingAppTitle').value.trim() || "My Notebook", 
-    textColor: $('settingTextColor').value, 
-    btnColor: $('settingBtnColor').value 
-  };
-  applySettingsToUI();
-  await setDoc(doc(db, "user_settings", currentUser.uid), settings, { merge: true });
-  showToast("Đã lưu Cài đặt Giao diện!");
-}, "Lỗi khi lưu cài đặt!");
+  if (bg) { settings.recentImages = [bg, ...(settings.recentImages || []).filter(u => u !== bg)].slice(0, 10); try { await idb.del('bg'); } catch {} }
+  settings = { ...settings, bgUrl: bg, isDark: $('darkModeToggle').checked, fontSize: $('fontSizeSlider').value, appTitle: $('settingAppTitle').value.trim() || "My Notebook", textColor: $('settingTextColor').value, btnColor: $('settingBtnColor').value };
+  applySettingsToUI(); await setDoc(doc(db, "user_settings", currentUser.uid), settings, { merge: true }); showToast("Đã lưu Cài đặt!");
+});
 
-/* ---------- Tải dữ liệu (song song) ---------- */
 const byCreated = (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '');
 const userQ = col => getDocs(query(col, where("userId", "==", currentUser.uid)));
-
 async function loadCoreData() {
   if (!currentUser) return;
-  const [, tabSnap, folderSnap, entrySnap] = await Promise.all([
-    loadUserSettings(), 
-    userQ(tabsCol), 
-    userQ(foldersCol), 
-    userQ(diaryCol)
-  ]);
-  
+  const [, tabSnap, folderSnap, entrySnap] = await Promise.all([loadUserSettings(), userQ(tabsCol), userQ(foldersCol), userQ(diaryCol)]);
   allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
-  allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreated);
+  allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
   entriesCache = entrySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  if (!allTabs.length) { 
-    const createdAt = new Date().toISOString(); 
-    const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt, order: 0 }); 
-    allTabs.push({ id: r.id, name: "Chung", createdAt, order: 0 }); 
-  }
-  
-  currentTabId = allTabs[0].id;
-  renderAll();
+  if (!allTabs.length) { const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt: new Date().toISOString(), order: 0 }); allTabs.push({ id: r.id, name: "Chung", createdAt: new Date().toISOString(), order: 0 }); }
+  currentTabId = allTabs[0].id; renderAll();
 }
+function renderAll() { renderTabs(); renderFolderSelect(); renderSidebarSettings(); renderEntries(); }
 
-function renderAll() { 
-  renderTabs(); 
-  renderFolderSelect(); 
-  renderSidebarSettings(); 
-  renderEntries(); 
-}
-
-/* ---------- Render (không gọi mạng) ---------- */
-function renderTabs() {
-  $('tabsContainer').innerHTML = allTabs.map(t => 
-    `<button class="btn ${t.id === currentTabId ? 'active-tab' : ''}" draggable="true" data-type="tab" data-id="${esc(t.id)}" data-act="switch-tab">${esc(t.name)}</button>`
-  ).join('');
-}
-
+function renderTabs() { $('tabsContainer').innerHTML = allTabs.map(t => `<button class="btn ${t.id === currentTabId ? 'active-tab' : ''}" draggable="true" data-type="tab" data-id="${esc(t.id)}" data-act="switch-tab">${esc(t.name)}</button>`).join(''); }
 function renderFolderSelect() {
-  const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId);
+  const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
   sel.innerHTML = '<option value="">-- Không xếp thư mục --</option>' + fs.map(f => `<option value="${esc(f.id)}">📁 ${esc(f.name)}</option>`).join('');
   if (fs.some(f => f.id === cur)) sel.value = cur;
 }
-
 function renderSidebarSettings() {
-  $('tabSettingsList').innerHTML = allTabs.map(t => 
-    `<div class="list-item-row"><span>${esc(t.name)}</span><div><button class="icon-btn" data-act="edit-tab" data-id="${esc(t.id)}">✏️</button><button class="icon-btn" data-act="delete-tab" data-id="${esc(t.id)}">🗑️</button></div></div>`
-  ).join('');
-  
-  const fs = allFolders.filter(f => f.tabId === currentTabId);
-  $('folderSettingsList').innerHTML = fs.length ? fs.map(f => 
-    `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`
-  ).join('') : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
+  $('tabSettingsList').innerHTML = allTabs.map(t => `<div class="list-item-row"><span>${esc(t.name)}</span><div><button class="icon-btn" data-act="edit-tab" data-id="${esc(t.id)}">✏️</button><button class="icon-btn" data-act="delete-tab" data-id="${esc(t.id)}">🗑️</button></div></div>`).join('');
+  const fs = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  $('folderSettingsList').innerHTML = fs.length ? fs.map(f => `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`).join('') : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
 }
 
 let sortMode = localStorage.getItem('sortMode') || 'updated-desc';
-const sorters = {
-  'name': (a, b) => a.title.localeCompare(b.title, 'vi', { numeric: true, sensitivity: 'base' }),
-  'updated-desc': (a, b) => b.ts.localeCompare(a.ts),
-  'updated-asc': (a, b) => a.ts.localeCompare(b.ts)
-};
-
+const sorters = { 'name': (a, b) => a.title.localeCompare(b.title, 'vi', { numeric: true, sensitivity: 'base' }), 'updated-desc': (a, b) => b.ts.localeCompare(a.ts), 'updated-asc': (a, b) => a.ts.localeCompare(b.ts) };
 const sortEntries = l => [...l].sort(sorters[sortMode] || sorters['updated-desc']);
-
 function buildTable(list) {
-  if (!list.length) return '';
-  list = sortEntries(list);
-  return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Cập nhật</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` +
-    list.map(e => `<tr data-act="open-entry" draggable="true" data-type="entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
+  if (!list.length) return ''; list = sortEntries(list);
+  return `<table class="entry-table glass-panel"><thead><tr><th style="width:50%">Tiêu đề</th><th style="width:25%">Cập nhật</th><th style="width:15%">Độ dài</th><th style="width:10%;text-align:center">Hành động</th></tr></thead><tbody>` + list.map(e => `<tr data-act="open-entry" draggable="true" data-type="entry" data-id="${esc(e.id)}"><td style="font-weight:500">${esc(e.title)}</td><td>${esc(e.dateStr)}</td><td style="color:var(--color-stone-gray)">${e.wCount} từ</td><td style="text-align:center"><button class="icon-btn" data-act="trash" data-id="${esc(e.id)}" title="Xóa">🗑️</button></td></tr>`).join('') + `</tbody></table>`;
 }
 
 let viewEntries = []; 
 function renderEntries() {
   const sorted = [...entriesCache].sort((a, b) => byCreated(b, a));
-  const tabFolders = allFolders.filter(f => f.tabId === currentTabId), folderIds = new Set(tabFolders.map(f => f.id));
-  const firstTab = allTabs[0]?.id;
-  viewEntries = []; 
-  const loose = [];
+  const tabFolders = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  const folderIds = new Set(tabFolders.map(f => f.id)); const firstTab = allTabs[0]?.id; viewEntries = []; const loose = [];
   
   for (const d of sorted) {
     if (d.status === 'trash') continue;
     if ((d.tabId || firstTab) !== currentTabId) continue;
     const e = { id: d.id, title: d.title?.trim() || "Tài liệu không tên", ts: d.updatedAt || d.createdAt || '', dateStr: formatDate(d.updatedAt || d.createdAt), wCount: d.wordCount || 0, folderId: d.folderId };
-    viewEntries.push(e); 
-    if (!d.folderId || !folderIds.has(d.folderId)) loose.push(e);
+    viewEntries.push(e); if (!d.folderId || !folderIds.has(d.folderId)) loose.push(e);
   }
   
-  $('sidebarHistoryList').innerHTML = viewEntries.length
-    ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('')
-    : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
-    
+  $('sidebarHistoryList').innerHTML = viewEntries.length ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('') : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
+  
+  // NÂNG CẤP: Gắn cờ draggable và data-type='folder' để nhận diện Drag & Drop
   $('folderGrid').innerHTML = tabFolders.map(f => { 
     const img = safeUrl(f.image); 
-    return `<div class="folder-box" ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
+    return `<div class="folder-box" draggable="true" data-type="folder" ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
   }).join('');
   
-  $('looseEntriesSection').style.display = loose.length ? 'block' : 'none';
-  $('looseEntriesTable').innerHTML = buildTable(loose);
-  
+  $('looseEntriesSection').style.display = loose.length ? 'block' : 'none'; $('looseEntriesTable').innerHTML = buildTable(loose);
   if (currentFolderViewId) openFolderView(currentFolderViewId);
 }
 
-/* ---------- Tab / Thư mục ---------- */
-const createTab = guard(async () => {
-  const name = $('newTabName').value.trim(); 
-  if (!name) return showToast("Vui lòng nhập tên Tab!");
-  const createdAt = new Date().toISOString(); 
-  const order = allTabs.length;
-  const r = await addDoc(tabsCol, { userId: currentUser.uid, name, createdAt, order });
-  allTabs.push({ id: r.id, name, createdAt, order }); 
-  $('newTabName').value = ""; 
-  renderAll(); 
-  showToast("Đã tạo Tab mới!");
-});
-
-const editTab = guard(async id => {
-  const t = allTabs.find(x => x.id === id), n = prompt("Nhập tên mới cho Tab:", t.name)?.trim(); 
-  if (!n) return;
-  await updateDoc(doc(db, "notebook_tabs", id), { name: n }); 
-  t.name = n; 
-  renderAll(); 
-  showToast("Đã đổi tên Tab!");
-});
-
+const createTab = guard(async () => { const name = $('newTabName').value.trim(); if (!name) return showToast("Vui lòng nhập tên Tab!"); const r = await addDoc(tabsCol, { userId: currentUser.uid, name, createdAt: new Date().toISOString(), order: allTabs.length }); allTabs.push({ id: r.id, name, createdAt: new Date().toISOString(), order: allTabs.length }); $('newTabName').value = ""; renderAll(); showToast("Đã tạo Tab mới!"); });
+const editTab = guard(async id => { const t = allTabs.find(x => x.id === id), n = prompt("Nhập tên mới:", t.name)?.trim(); if (!n) return; await updateDoc(doc(db, "notebook_tabs", id), { name: n }); t.name = n; renderAll(); });
 const deleteTab = guard(async id => {
-  if (allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!");
-  if (!confirm("Xóa Tab này? Các thư mục trong Tab sẽ bị xóa và bài viết được chuyển vào Thùng rác.")) return;
-  const firstTab = allTabs[0].id, batch = writeBatch(db);
-  const entries = entriesCache.filter(e => (e.tabId || firstTab) === id && e.status !== 'trash');
-  
-  entries.forEach(e => batch.update(doc(db, "diaries", e.id), { status: 'trash' }));
-  allFolders.filter(f => f.tabId === id).forEach(f => batch.delete(doc(db, "notebook_folders", f.id)));
-  batch.delete(doc(db, "notebook_tabs", id)); 
-  
-  await batch.commit();
-  entries.forEach(e => e.status = 'trash');
-  allFolders = allFolders.filter(f => f.tabId !== id); 
-  allTabs = allTabs.filter(t => t.id !== id);
-  if (currentTabId === id) { currentTabId = allTabs[0].id; closeEditor(); closeFolderView(); }
-  renderAll(); 
-  showToast("Đã xóa Tab!");
+  if (allTabs.length <= 1) return alert("Không thể xóa Tab cuối cùng!"); if (!confirm("Xóa Tab này?")) return;
+  const firstTab = allTabs[0].id, batch = writeBatch(db); const entries = entriesCache.filter(e => (e.tabId || firstTab) === id && e.status !== 'trash');
+  entries.forEach(e => batch.update(doc(db, "diaries", e.id), { status: 'trash' })); allFolders.filter(f => f.tabId === id).forEach(f => batch.delete(doc(db, "notebook_folders", f.id))); batch.delete(doc(db, "notebook_tabs", id)); await batch.commit();
+  entries.forEach(e => e.status = 'trash'); allFolders = allFolders.filter(f => f.tabId !== id); allTabs = allTabs.filter(t => t.id !== id); if (currentTabId === id) { currentTabId = allTabs[0].id; closeEditor(); closeFolderView(); } renderAll();
 });
 
 const createFolder = guard(async () => {
-  const name = $('newFolderName').value.trim();
-  const image = $('newFolderImage').value.trim(); 
-  if (!name) return showToast("Vui lòng nhập tên Thư mục!");
-  
-  const createdAt = new Date().toISOString(); 
-  const r = await addDoc(foldersCol, { userId: currentUser.uid, tabId: currentTabId, name, image, createdAt });
-  allFolders.push({ id: r.id, tabId: currentTabId, name, image, createdAt });
-  $('newFolderName').value = ""; 
-  $('newFolderImage').value = ""; 
-  renderAll(); 
-  $('folderSelect').value = r.id; 
-  showToast("Đã tạo Thư mục!");
+  const name = $('newFolderName').value.trim(), image =$('newFolderImage').value.trim(); if (!name) return showToast("Vui lòng nhập tên Thư mục!");
+  const r = await addDoc(foldersCol, { userId: currentUser.uid, tabId: currentTabId, name, image, createdAt: new Date().toISOString(), order: allFolders.length }); allFolders.push({ id: r.id, tabId: currentTabId, name, image, createdAt: new Date().toISOString(), order: allFolders.length }); $('newFolderName').value = ""; $('newFolderImage').value = ""; renderAll(); $('folderSelect').value = r.id; showToast("Đã tạo Thư mục!");
 });
-
-const deleteFolder = guard(async id => {
-  if (!confirm("Xóa thư mục? Bài viết sẽ được giữ lại ở mục Chưa phân loại.")) return;
-  await deleteDoc(doc(db, "notebook_folders", id)); 
-  allFolders = allFolders.filter(f => f.id !== id);
-  if (currentFolderViewId === id) closeFolderView(); 
-  renderAll(); 
-  showToast("Đã xóa Thư mục!");
-});
-
+const deleteFolder = guard(async id => { if (!confirm("Xóa thư mục?")) return; await deleteDoc(doc(db, "notebook_folders", id)); allFolders = allFolders.filter(f => f.id !== id); if (currentFolderViewId === id) closeFolderView(); renderAll(); });
 const editFolder = guard(async id => {
-  const f = allFolders.find(x => x.id === id); 
-  if (!f) return;
-  const n = prompt("Nhập tên mới cho Thư mục:", f.name); 
-  if (n === null) return;
-  const img = prompt("Nhập link ảnh bìa mới (để trống nếu chỉ dùng màu nền):", f.image || ""); 
-  if (img === null) return;
-  if (!n.trim()) return showToast("Tên thư mục không được để trống!");
-  
-  await updateDoc(doc(db, "notebook_folders", id), { name: n.trim(), image: img.trim() });
-  Object.assign(f, { name: n.trim(), image: img.trim() }); 
-  renderAll(); 
-  showToast("Đã cập nhật Thư mục!");
+  const f = allFolders.find(x => x.id === id); if (!f) return; const n = prompt("Tên mới:", f.name); if (n === null) return; const img = prompt("Link ảnh bìa:", f.image || ""); if (img === null) return; if (!n.trim()) return showToast("Không được để trống!");
+  await updateDoc(doc(db, "notebook_folders", id), { name: n.trim(), image: img.trim() }); Object.assign(f, { name: n.trim(), image: img.trim() }); renderAll();
 });
 
 let switching = false;
-function switchTab(id) {
-  if (id === currentTabId || switching) return; 
-  switching = true;
-  currentTabId = id; 
-  closeEditor(); 
-  closeFolderView(); 
-  renderAll(); 
-  switching = false;
-}
-
-/* ---------- Xem thư mục / Trình soạn thảo ---------- */
+function switchTab(id) { if (id === currentTabId || switching) return; switching = true; currentTabId = id; closeEditor(); closeFolderView(); renderAll(); switching = false; }
 function openFolderView(id) {
-  const f = allFolders.find(x => x.id === id); 
-  if (!f) return;
-  currentFolderViewId = id;
-  $('mainHeader').style.display = 'none';
-  $('mainBlogView').style.display = 'none';$('editorView').style.display = 'none';
-  $('folderDetailView').style.display = 'flex';$('folderDetailTitle').textContent = f.name; 
-  $('folderEntriesTable').innerHTML = buildTable(viewEntries.filter(e => e.folderId === id));
+  const f = allFolders.find(x => x.id === id); if (!f) return; currentFolderViewId = id;
+  $('mainHeader').style.display = 'none';$('mainBlogView').style.display = 'none'; $('editorView').style.display = 'none';$('folderDetailView').style.display = 'flex'; $('folderDetailTitle').textContent = f.name; $('folderEntriesTable').innerHTML = buildTable(viewEntries.filter(e => e.folderId === id));
 }
-
-function closeFolderView() { 
-  currentFolderViewId = null; 
-  $('folderDetailView').style.display = 'none';$('editorView').style.display = 'none'; 
-  $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; 
-}
-
-function showEditor() {
-  $('sidebar').classList.remove('open');
-  ['mainHeader', 'mainBlogView', 'folderDetailView'].forEach(i => $(i).style.display = 'none');$('editorView').style.display = 'flex'; 
-  document.body.classList.add('editor-open');
-}
-
-function setEditMode(on) {
-  $('entryTitle').toggleAttribute('readonly', !on); 
-  editor.setAttribute('contenteditable', on);
-  $('editorToolbar').style.display = on ? 'flex' : 'none'; 
-  $('editorBottomBar').style.display = on ? 'flex' : 'none';
-  $('enableEditBtn').style.display = on ? 'none' : 'inline-flex'; 
-  if (on) editor.focus();
-}
-
-function toLocalInput(iso) { 
-  const d = new Date(iso); 
-  if (isNaN(d)) return ''; 
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); 
-  return d.toISOString().slice(0, 16); 
-}
-
-function openEditor() {
-  currentEditingId = null; 
-  $('entryTitle').value = ""; 
-  editor.innerHTML = ""; 
-  $('folderSelect').value = currentFolderViewId || "";
-  $('liveWordCount').textContent = "0 từ"; 
-  $('saveBtn').textContent = "Lưu tài liệu"; 
-  $('entryDate').value = toLocalInput(new Date().toISOString());
-  showEditor(); 
-  setEditMode(true); 
-  setTimeout(() => $('entryTitle').focus(), 100);
-}
-
-function closeEditor() {
-  currentEditingId = null; 
-  $('editorView').style.display = 'none'; 
-  document.body.classList.remove('editor-open');
-  if (currentFolderViewId) openFolderView(currentFolderViewId); 
-  else { 
-    $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; 
-  }
-}
-
+function closeFolderView() { currentFolderViewId = null; $('folderDetailView').style.display = 'none';$('editorView').style.display = 'none'; $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; }
+function showEditor() { $('sidebar').classList.remove('open'); ['mainHeader', 'mainBlogView', 'folderDetailView'].forEach(i => $(i).style.display = 'none');$('editorView').style.display = 'flex'; document.body.classList.add('editor-open'); }
+function setEditMode(on) { $('entryTitle').toggleAttribute('readonly', !on); editor.setAttribute('contenteditable', on);$('editorToolbar').style.display = on ? 'flex' : 'none'; $('editorBottomBar').style.display = on ? 'flex' : 'none'; $('enableEditBtn').style.display = on ? 'none' : 'inline-flex'; if (on) editor.focus(); }
+function toLocalInput(iso) { const d = new Date(iso); if (isNaN(d)) return ''; d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
+function openEditor() { currentEditingId = null; $('entryTitle').value = ""; editor.innerHTML = ""; $('folderSelect').value = currentFolderViewId || ""; $('liveWordCount').textContent = "0 từ"; $('saveBtn').textContent = "Lưu tài liệu"; $('entryDate').value = toLocalInput(new Date().toISOString()); showEditor(); setEditMode(true); setTimeout(() =>$('entryTitle').focus(), 100); }
+function closeEditor() { currentEditingId = null; $('editorView').style.display = 'none'; document.body.classList.remove('editor-open'); if (currentFolderViewId) openFolderView(currentFolderViewId); else { $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; } }
 function editEntry(id) {
-  const e = entriesCache.find(x => x.id === id); 
-  if (!e) return;
-  $('entryTitle').value = e.title || ""; 
-  editor.innerHTML = cleanHtml(e.content);
-  $('folderSelect').value = e.folderId || ""; 
-  $('liveWordCount').textContent = countText(editor.textContent) + " từ";
-  $('entryDate').value = toLocalInput(e.createdAt); 
-  currentEditingId = id; 
-  $('saveBtn').textContent = "Cập nhật tài liệu";
-  showEditor(); 
-  setEditMode(false);
+  const e = entriesCache.find(x => x.id === id); if (!e) return;
+  $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content); $('folderSelect').value = e.folderId \vert{}\vert{} ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ"; $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu"; showEditor(); setEditMode(false);
 }
 
-let wcTimer;
-editor.addEventListener('input', () => { 
-  clearTimeout(wcTimer); 
-  wcTimer = setTimeout(() => $('liveWordCount').textContent = countText(editor.textContent) + " từ", 200); 
-});
-
+let wcTimer; editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTimeout(() => $('liveWordCount').textContent = countText(editor.textContent) + " từ", 200); });
 $('saveBtn').addEventListener('click', guard(async () => {
-  const title = $('entryTitle').value.trim();
-  const content = cleanHtml(editor.innerHTML.trim());
-  if (!editor.textContent.trim() && !editor.querySelector('img')) return showToast("Bạn chưa viết nội dung!");
-  
-  const data = { 
-    title, content, folderId: $('folderSelect').value, 
-    wordCount: countText(editor.textContent), 
-    updatedAt: new Date().toISOString(), 
-    createdAt:$('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() 
-  };
-  
-  const btn = $('saveBtn'); 
-  btn.disabled = true; 
-  btn.textContent = "Đang lưu...";
-  try {
-    if (currentEditingId) { 
-      await updateDoc(doc(db, "diaries", currentEditingId), data); 
-      Object.assign(entriesCache.find(e => e.id === currentEditingId), data); 
-      showToast("Đã cập nhật!"); 
-    } else { 
-      const full = { userId: currentUser.uid, tabId: currentTabId, status: 'active', ...data }; 
-      const r = await addDoc(diaryCol, full); 
-      entriesCache.push({ id: r.id, ...full }); 
-      showToast("Đã lưu trang mới!"); 
-    }
-    renderEntries(); 
-    closeEditor();
-  } finally { 
-    btn.disabled = false; 
-    btn.textContent = currentEditingId ? "Cập nhật tài liệu" : "Lưu tài liệu"; 
-  }
-}, "Lỗi khi lưu!"));
-
-/* Định dạng văn bản */
-let savedRange = null;
-['keyup', 'mouseup', 'mouseleave'].forEach(ev => editor.addEventListener(ev, () => { 
-  const s = getSelection(); 
-  if (s.rangeCount) savedRange = s.getRangeAt(0); 
+  const title = $('entryTitle').value.trim(), content = cleanHtml(editor.innerHTML.trim()); if (!editor.textContent.trim() && !editor.querySelector('img')) return showToast("Bạn chưa viết nội dung!");
+  const data = { title, content, folderId: $('folderSelect').value, wordCount: countText(editor.textContent), updatedAt: new Date().toISOString(), createdAt:$('entryDate').value ? new Date($('entryDate').value).toISOString() : new Date().toISOString() };
+  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = "Đang lưu...";
+  try { if (currentEditingId) { await updateDoc(doc(db, "diaries", currentEditingId), data); Object.assign(entriesCache.find(e => e.id === currentEditingId), data); showToast("Đã cập nhật!"); } else { const full = { userId: currentUser.uid, tabId: currentTabId, status: 'active', ...data }; const r = await addDoc(diaryCol, full); entriesCache.push({ id: r.id, ...full }); showToast("Đã lưu trang mới!"); } renderEntries(); closeEditor(); } finally { btn.disabled = false; btn.textContent = currentEditingId ? "Cập nhật tài liệu" : "Lưu tài liệu"; }
 }));
 
-$('textColorPicker').addEventListener('input', e => {
-  editor.focus(); 
-  if (savedRange) { 
-    const s = getSelection(); 
-    s.removeAllRanges(); 
-    s.addRange(savedRange); 
-  }
-  document.execCommand('styleWithCSS', false, true); 
-  document.execCommand('foreColor', false, e.target.value);
-});
+let savedRange = null; ['keyup', 'mouseup', 'mouseleave'].forEach(ev => editor.addEventListener(ev, () => { const s = getSelection(); if (s.rangeCount) savedRange = s.getRangeAt(0); }));
+$('textColorPicker').addEventListener('input', e => { editor.focus(); if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, e.target.value); });
+editor.addEventListener('paste', e => { e.preventDefault(); const text = (e.clipboardData || window.clipboardData).getData('text/plain'); if (!text && [...(e.clipboardData?.items || [])].some(i => i.type.startsWith('image'))) return showToast("Chỉ hỗ trợ dán chữ!"); document.execCommand('insertText', false, text); });
 
-editor.addEventListener('paste', e => {
-  e.preventDefault();
-  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-  if (!text && [...(e.clipboardData?.items || [])].some(i => i.type.startsWith('image'))) return showToast("Ứng dụng chưa hỗ trợ chèn ảnh. Vui lòng chỉ dán chữ!");
-  document.execCommand('insertText', false, text);
-});
+const setStatus = async (id, status) => { await updateDoc(doc(db, "diaries", id), { status }); const e = entriesCache.find(x => x.id === id); if (e) e.status = status; };
+function renderTrash() { const items = entriesCache.filter(e => e.status === 'trash').sort((a, b) => byCreated(b, a)); $('trashListContainer').innerHTML = items.length ? items.map(e => `<div class="trash-item glass-panel"><div class="trash-title">${esc(e.title?.trim() || "Tài liệu không tên")}</div><div style="font-size:14px;color:var(--color-stone-gray);margin-bottom:16px">${esc(formatDate(e.createdAt))}</div><div style="display:flex;gap:12px"><button class="btn" data-act="restore" data-id="${esc(e.id)}">Khôi phục</button><button class="btn" data-act="hard-delete" data-id="${esc(e.id)}">Xóa vĩnh viễn</button></div></div>`).join('') : '<p style="color:var(--color-stone-gray);text-align:center">Thùng rác trống.</p>'; }
+const moveToTrash = guard(async id => { if (!confirm("Chuyển bài viết này vào Thùng rác?")) return; await setStatus(id, 'trash'); if (currentEditingId === id) closeEditor(); renderEntries(); });
+const restore = guard(async id => { await setStatus(id, 'active'); renderTrash(); renderEntries(); });
+const hardDelete = guard(async id => { if (!confirm("CẢNH BÁO: Xóa vĩnh viễn?")) return; await deleteDoc(doc(db, "diaries", id)); entriesCache = entriesCache.filter(e => e.id !== id); renderTrash(); });
 
-/* ---------- Thùng rác ---------- */
-const setStatus = async (id, status) => { 
-  await updateDoc(doc(db, "diaries", id), { status }); 
-  const e = entriesCache.find(x => x.id === id); 
-  if (e) e.status = status; 
-};
-
-function renderTrash() {
-  const items = entriesCache.filter(e => e.status === 'trash').sort((a, b) => byCreated(b, a));
-  $('trashListContainer').innerHTML = items.length ? items.map(e => 
-    `<div class="trash-item glass-panel"><div class="trash-title">${esc(e.title?.trim() || "Tài liệu không tên")}</div><div style="font-size:14px;color:var(--color-stone-gray);margin-bottom:16px">${esc(formatDate(e.createdAt))}</div><div style="display:flex;gap:12px"><button class="btn" data-act="restore" data-id="${esc(e.id)}">Khôi phục</button><button class="btn" data-act="hard-delete" data-id="${esc(e.id)}">Xóa vĩnh viễn</button></div></div>`
-  ).join('') : '<p style="color:var(--color-stone-gray);text-align:center">Thùng rác trống.</p>';
-}
-
-const moveToTrash = guard(async id => { 
-  if (!confirm("Chuyển bài viết này vào Thùng rác?")) return; 
-  await setStatus(id, 'trash'); 
-  if (currentEditingId === id) closeEditor(); 
-  renderEntries(); 
-  showToast("Đã chuyển vào thùng rác!"); 
-});
-const restore = guard(async id => { 
-  await setStatus(id, 'active'); 
-  renderTrash(); 
-  renderEntries(); 
-  showToast("Đã khôi phục bài viết!"); 
-});
-const hardDelete = guard(async id => { 
-  if (!confirm("CẢNH BÁO: Bài viết sẽ bị xóa vĩnh viễn. Tiếp tục?")) return; 
-  await deleteDoc(doc(db, "diaries", id)); 
-  entriesCache = entriesCache.filter(e => e.id !== id); 
-  renderTrash(); 
-  showToast("Đã xóa vĩnh viễn!"); 
-});
-
-/* ---------- Cắt ảnh nền (Cropper.js tải khi cần) ---------- */
 let cropper = null, cropperLoaded;
-function loadCropper() {
-  return cropperLoaded ??= new Promise((res, rej) => {
-    const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css' });
-    const js = Object.assign(document.createElement('script'), { src: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js', onload: res, onerror: () => { cropperLoaded = null; rej(); } });
-    document.head.append(css, js);
-  });
-}
-
+function loadCropper() { return cropperLoaded ??= new Promise((res, rej) => { const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css' }); const js = Object.assign(document.createElement('script'), { src: 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js', onload: res, onerror: () => { cropperLoaded = null; rej(); } }); document.head.append(css, js); }); }
 $('localBgUploader').addEventListener('change', guard(async e => {
-  const file = e.target.files[0]; 
-  e.target.value = ''; 
-  if (!file) return;   
-  
-  await loadCropper();   
-  
-  const src = await new Promise((res, rej) => { 
-    const r = new FileReader(); 
-    r.onload = () => res(r.result); 
-    r.onerror = rej; 
-    r.readAsDataURL(file); 
-  });
-  
-  $('sidebar').classList.remove('open');
-  const img = $('imageToCrop'); 
-  img.src = src; 
-  $('cropModal').style.display = 'flex';
-  
-  cropper?.destroy();
-  cropper = new Cropper(img, { 
-    aspectRatio: innerWidth / innerHeight, 
-    viewMode: 1, 
-    dragMode: 'move', 
-    autoCropArea: 1, 
-    restore: false, 
-    guides: true, 
-    center: true, 
-    highlight: false, 
-    cropBoxMovable: false, 
-    cropBoxResizable: false, 
-    toggleDragModeOnDblclick: false, 
-    zoomable: true, 
-    zoomOnTouch: true 
-  });
-}, "Không tải được công cụ cắt ảnh!"));
-
-function closeCrop() { 
-  $('cropModal').style.display = 'none'; 
-  cropper?.destroy(); 
-  cropper = null; 
-}
-
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return; await loadCropper();   
+  const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  $('sidebar').classList.remove('open'); const img = $('imageToCrop'); img.src = src; $('cropModal').style.display = 'flex'; cropper?.destroy();
+  cropper = new Cropper(img, { aspectRatio: innerWidth / innerHeight, viewMode: 1, dragMode: 'move', autoCropArea: 1, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: false, cropBoxResizable: false, toggleDragModeOnDblclick: false, zoomable: true, zoomOnTouch: true });
+}));
+function closeCrop() { $('cropModal').style.display = 'none'; cropper?.destroy(); cropper = null; }
 const applyCrop = guard(async () => {
-  if (!cropper) return;
-  const w = Math.min(innerWidth, 1280), h = Math.round(w * innerHeight / innerWidth);
+  if (!cropper) return; const w = Math.min(innerWidth, 1280), h = Math.round(w * innerHeight / innerWidth);
   const blob = await new Promise(res => cropper.getCroppedCanvas({ width: w, height: h, imageSmoothingQuality: 'high' }).toBlob(res, 'image/jpeg', 0.75));
-  await idb.set('bg', blob); 
-  $('settingBgUrl').value = ''; 
-  await applyBackground();
-  showToast("Đã áp dụng hình nền thành công!"); 
-  closeCrop();
+  await idb.set('bg', blob); $('settingBgUrl').value = ''; await applyBackground(); showToast("Đã áp dụng hình nền thành công!"); closeCrop();
 });
 
-/* ---------- Xử lý sự kiện Kéo Thả (Drag & Drop) ---------- */
+/* ---------- XỬ LÝ KÉO THẢ NATIVE + POLYFILL (NÂNG CẤP) ---------- */
 let draggedItem = null;
 
 document.addEventListener('dragstart', e => {
@@ -1034,6 +598,10 @@ document.addEventListener('dragstart', e => {
   if (tab) { draggedItem = { type: 'tab', id: tab.dataset.id, el: tab }; e.dataTransfer.effectAllowed = 'move'; }
   const entry = e.target.closest('[data-type="entry"]');
   if (entry) { draggedItem = { type: 'entry', id: entry.dataset.id, el: entry }; e.dataTransfer.effectAllowed = 'move'; }
+  
+  // MỚI: Nhận diện kéo thư mục
+  const folder = e.target.closest('[data-type="folder"]');
+  if (folder) { draggedItem = { type: 'folder', id: folder.dataset.id, el: folder }; e.dataTransfer.effectAllowed = 'move'; }
 });
 
 document.addEventListener('dragover', e => {
@@ -1049,6 +617,11 @@ document.addEventListener('dragover', e => {
     if (folder) folder.classList.add('drag-over');
     const dropTab = e.target.closest('[data-type="tab"]');
     if (dropTab) dropTab.classList.add('drag-over');
+  }
+  // MỚI: Hiệu ứng hover khi đổi chỗ thư mục
+  if (draggedItem.type === 'folder') {
+    const dropFolder = e.target.closest('[data-type="folder"]');
+    if (dropFolder && dropFolder !== draggedItem.el) dropFolder.classList.add('drag-over');
   }
 });
 
@@ -1073,12 +646,26 @@ document.addEventListener('drop', async e => {
       const dropIdx = allTabs.findIndex(t => t.id === dropTab.dataset.id);
       const [removed] = allTabs.splice(draggedIdx, 1);
       allTabs.splice(dropIdx, 0, removed);
-
       renderTabs(); 
       const batch = writeBatch(db);
       allTabs.forEach((t, i) => { t.order = i; batch.update(doc(db, "notebook_tabs", t.id), { order: i }); });
       await batch.commit();
-      showToast("Đã cập nhật thứ tự Tab!");
+    }
+  }
+
+  // MỚI: Xử lý đổi chỗ Thư mục
+  if (type === 'folder') {
+    const dropFolder = e.target.closest('[data-type="folder"]');
+    if (dropFolder && dropFolder.dataset.id !== itemId) {
+      const draggedIdx = allFolders.findIndex(f => f.id === itemId);
+      const dropIdx = allFolders.findIndex(f => f.id === dropFolder.dataset.id);
+      const [removed] = allFolders.splice(draggedIdx, 1);
+      allFolders.splice(dropIdx, 0, removed);
+      renderEntries(); 
+      const batch = writeBatch(db);
+      allFolders.forEach((f, i) => { f.order = i; batch.update(doc(db, "notebook_folders", f.id), { order: i }); });
+      await batch.commit();
+      showToast("Đã cập nhật vị trí thư mục!");
     }
   }
 
@@ -1091,17 +678,14 @@ document.addEventListener('drop', async e => {
       if (folder) {
         const fId = folder.dataset.id;
         if (entry.folderId !== fId) {
-          entry.folderId = fId;
-          renderEntries();
-          try { await updateDoc(doc(db, "diaries", itemId), { folderId: fId }); showToast("Đã chuyển bài viết vào thư mục!"); } catch (err) { showToast("Lỗi di chuyển file!"); }
+          entry.folderId = fId; renderEntries();
+          try { await updateDoc(doc(db, "diaries", itemId), { folderId: fId }); showToast("Đã chuyển vào thư mục!"); } catch (err) {}
         }
       } else if (tab) {
         const tId = tab.dataset.id;
         if (entry.tabId !== tId || entry.folderId) {
-          entry.tabId = tId;
-          entry.folderId = null; 
-          renderEntries();
-          try { await updateDoc(doc(db, "diaries", itemId), { tabId: tId, folderId: null }); showToast("Đã chuyển bài viết sang Tab mới!"); } catch (err) { showToast("Lỗi di chuyển file!"); }
+          entry.tabId = tId; entry.folderId = null; renderEntries();
+          try { await updateDoc(doc(db, "diaries", itemId), { tabId: tId, folderId: null }); showToast("Đã chuyển sang Tab mới!"); } catch (err) {}
         }
       }
     }
@@ -1114,92 +698,33 @@ document.addEventListener('dragend', () => {
   document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
 });
 
-/* ---------- Điều phối sự kiện click ---------- */
 const actions = {
-  'auth': handleAuth, 
-  'auth-toggle': toggleAuth, 
-  'auth-forgot': handleForgot,
+  'auth': handleAuth, 'auth-toggle': toggleAuth, 'auth-forgot': handleForgot,
   'logout': () => { if (confirm("Bạn có chắc muốn đăng xuất?")) signOut(auth); },
-  'new-entry': openEditor, 
-  'close-editor': closeEditor, 
-  'edit-mode': () => setEditMode(true),
-  'switch-tab': t => switchTab(t.dataset.id), 
-  'new-tab': createTab, 
-  'edit-tab': t => editTab(t.dataset.id), 
-  'delete-tab': t => deleteTab(t.dataset.id),
-  'new-folder': createFolder, 
-  'edit-folder': t => editFolder(t.dataset.id), 
-  'delete-folder': t => deleteFolder(t.dataset.id),
-  'open-folder': t => openFolderView(t.dataset.id), 
-  'close-folder': closeFolderView,
-  'open-entry': t => editEntry(t.dataset.id), 
-  'trash': t => moveToTrash(t.dataset.id),
+  'new-entry': openEditor, 'close-editor': closeEditor, 'edit-mode': () => setEditMode(true),
+  'switch-tab': t => switchTab(t.dataset.id), 'new-tab': createTab, 'edit-tab': t => editTab(t.dataset.id), 'delete-tab': t => deleteTab(t.dataset.id),
+  'new-folder': createFolder, 'edit-folder': t => editFolder(t.dataset.id), 'delete-folder': t => deleteFolder(t.dataset.id),
+  'open-folder': t => openFolderView(t.dataset.id), 'close-folder': closeFolderView,
+  'open-entry': t => editEntry(t.dataset.id), 'trash': t => moveToTrash(t.dataset.id),
   'open-trash': () => { $('sidebar').classList.remove('open'); renderTrash();$('trashModal').style.display = 'flex'; },
-  'close-trash': () => $('trashModal').style.display = 'none',
-  'restore': t => restore(t.dataset.id), 
-  'hard-delete': t => hardDelete(t.dataset.id),
-  'save-visual': saveVisualSettings, 
-  'pick-bg': () => $('localBgUploader').click(),
-  'pick-history': async t => { 
-    try { await idb.del('bg'); } catch {} 
-    $('settingBgUrl').value = t.dataset.url; 
-    setBg(safeUrl(t.dataset.url)); 
-    showToast("Đã chọn ảnh từ lịch sử!"); 
-  },
-  'crop-close': closeCrop, 
-  'crop-apply': applyCrop
+  'close-trash': () => $('trashModal').style.display = 'none', 'restore': t => restore(t.dataset.id), 'hard-delete': t => hardDelete(t.dataset.id),
+  'save-visual': saveVisualSettings, 'pick-bg': () => $('localBgUploader').click(),
+  'pick-history': async t => { try { await idb.del('bg'); } catch {} $('settingBgUrl').value = t.dataset.url; setBg(safeUrl(t.dataset.url)); showToast("Đã chọn ảnh!"); },
+  'crop-close': closeCrop, 'crop-apply': applyCrop
 };
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
-  if (t) { 
-    if (t.tagName === 'A') e.preventDefault(); 
-    if (t.dataset.act === 'trash') e.stopPropagation(); 
-    actions[t.dataset.act]?.(t); 
-  }
+  if (t) { if (t.tagName === 'A') e.preventDefault(); if (t.dataset.act === 'trash') e.stopPropagation(); actions[t.dataset.act]?.(t); }
   const f = e.target.closest('[data-fmt]');
-  if (f) { 
-    if (f.dataset.fmt === 'tab') document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'); 
-    else document.execCommand(f.dataset.fmt, false, null); 
-    editor.focus(); 
-  }
-  const sb = $('sidebar');
-  if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) {
-    sb.classList.remove('open');
-  }
+  if (f) { if (f.dataset.fmt === 'tab') document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'); else document.execCommand(f.dataset.fmt, false, null); editor.focus(); }
+  const sb = $('sidebar'); if (sb.classList.contains('open') && !sb.contains(e.target) && !$('openMenuBtn').contains(e.target)) { sb.classList.remove('open'); }
 });
 
-$('openMenuBtn').addEventListener('click', () =>$('sidebar').classList.add('open'));
-$('closeMenuBtn').addEventListener('click', () =>$('sidebar').classList.remove('open'));
-
-$('sortSelect').value = sortMode;
-$('sortSelect').addEventListener('change', e => { 
-  sortMode = e.target.value; 
-  localStorage.setItem('sortMode', sortMode); 
-  renderEntries(); 
-});
-
-$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
-
-$('settingTextColor').addEventListener('input', e => {
-  document.documentElement.style.setProperty('--user-text-color', e.target.value);
-});
-
-$('settingBtnColor').addEventListener('input', e => {
-  document.documentElement.style.setProperty('--user-btn-color', e.target.value);
-});
-
-$('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));
-
-$('fontSizeSlider').addEventListener('input', e => {
-  document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px');
-});
-
-['auth-email', 'auth-password'].forEach(i => {
-  $(i).addEventListener('keydown', e => { 
-    if (e.key === 'Enter') handleAuth(); 
-  });
-});
+$('openMenuBtn').addEventListener('click', () =>$('sidebar').classList.add('open'));$('closeMenuBtn').addEventListener('click', () =>$('sidebar').classList.remove('open'));$('sortSelect').value = sortMode; $('sortSelect').addEventListener('change', e => { sortMode = e.target.value; localStorage.setItem('sortMode', sortMode); renderEntries(); });$('settingAppTitle').addEventListener('input', e => setTitle(e.target.value));
+$('settingTextColor').addEventListener('input', e => { document.documentElement.style.setProperty('--user-text-color', e.target.value); });$('settingBtnColor').addEventListener('input', e => { document.documentElement.style.setProperty('--user-btn-color', e.target.value); });
+$('darkModeToggle').addEventListener('change', e => setDark(e.target.checked));$('fontSizeSlider').addEventListener('input', e => { document.documentElement.style.setProperty('--editor-fs', e.target.value + 'px'); });
+['auth-email', 'auth-password'].forEach(i => { $(i).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); }); });
 </script>
 </body>
 </html>
