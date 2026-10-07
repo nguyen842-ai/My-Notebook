@@ -554,8 +554,17 @@ function openEditor() { currentEditingId = null; $('entryTitle').value = ""; edi
 function closeEditor() { currentEditingId = null; $('editorView').style.display = 'none'; document.body.classList.remove('editor-open'); if (currentFolderViewId) openFolderView(currentFolderViewId); else { $('mainHeader').style.display = 'block';$('mainBlogView').style.display = 'flex'; } }
 function editEntry(id) {
   const e = entriesCache.find(x => x.id === id); if (!e) return;
-  $('entryTitle').value = e.title || ""; editor.innerHTML = cleanHtml(e.content); $('folderSelect').value = e.folderId \vert{}\vert{} ""; $('liveWordCount').textContent = countText(editor.textContent) + " từ"; $('entryDate').value = toLocalInput(e.createdAt); currentEditingId = id; $('saveBtn').textContent = "Cập nhật tài liệu"; showEditor(); setEditMode(false);
+  $('entryTitle').value = e.title || ""; 
+  editor.innerHTML = cleanHtml(e.content); 
+  $('folderSelect').value = e.folderId || ""; // <-- Sửa tại đây
+  $('liveWordCount').textContent = countText(editor.textContent) + " từ"; 
+  $('entryDate').value = toLocalInput(e.createdAt); 
+  currentEditingId = id; 
+  $('saveBtn').textContent = "Cập nhật tài liệu"; 
+  showEditor(); 
+  setEditMode(false);
 }
+
 
 let wcTimer; editor.addEventListener('input', () => { clearTimeout(wcTimer); wcTimer = setTimeout(() => $('liveWordCount').textContent = countText(editor.textContent) + " từ", 200); });
 $('saveBtn').addEventListener('click', guard(async () => {
