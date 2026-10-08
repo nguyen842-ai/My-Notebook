@@ -162,11 +162,18 @@ body.editor-open .main-content{overflow:hidden}
   animation: jiggle 0.35s infinite ease-in-out;
   cursor: grab !important;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  
+  /* [QUAN TRỌNG CHO IOS]: Vô hiệu hoá kéo thả mặc định của trình duyệt để Thư viện Polyfill làm việc */
+  -webkit-user-drag: none; 
+  touch-action: none; 
 }
-.folder-grid.is-editing .folder-box:active {
+
+/* Tắt chuyển động lúc ngón tay chạm vào để iOS không bị loạn Hit-Test */
+.folder-grid.is-editing .folder-box:active,
+.folder-grid.is-editing .folder-box:hover {
   cursor: grabbing !important;
-  animation: none;
-  transform: scale(1.08);
+  animation: none; 
+  transform: scale(1.05);
 }
 
 body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
@@ -184,8 +191,8 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
 }
 </style>
 <script>try { if(localStorage.getItem('savedDarkMode')==='true')document.documentElement.classList.add('dark-mode'); } catch(e){}</script>
-<!-- Thư viện DragDropTouch giúp iOS nhận diện HTML5 Drag/Drop -->
-<script src="https://unpkg.com/drag-drop-touch@1.0.2/DragDropTouch.js" defer></script>
+<!-- [QUAN TRỌNG]: Bỏ chữ 'defer' để thư viện load ngay lập tức, chặn đứng sự can thiệp của iOS -->
+<script src="https://unpkg.com/drag-drop-touch@1.0.2/DragDropTouch.js"></script>
 </head>
 <body>
 
@@ -541,10 +548,17 @@ function renderEntries() {
   
   $('sidebarHistoryList').innerHTML = viewEntries.length ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('') : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
   
+  // Vẽ các khối thư mục
   $('folderGrid').innerHTML = tabFolders.map(f => { 
     const img = safeUrl(f.image); 
-    return `<div class="folder-box" draggable="true" data-type="folder" ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
+    // Nếu đang chế độ chỉnh sửa, gắn luôn draggable vào HTML
+    const dragAttr = isEditMode ? 'draggable="true"' : '';
+    return `<div class="folder-box" data-type="folder" ${dragAttr} ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
   }).join('');
+  
+  // Cập nhật lại UI Jiggle nếu đang bật (trường hợp thả thư mục xong máy vẽ lại)
+  if (isEditMode) $('folderGrid').classList.add('is-editing');
+  else $('folderGrid').classList.remove('is-editing');
   
   $('looseEntriesSection').style.display = loose.length ? 'block' : 'none'; $('looseEntriesTable').innerHTML = buildTable(loose);
   if (currentFolderViewId) openFolderView(currentFolderViewId);
@@ -627,39 +641,45 @@ const applyCrop = guard(async () => {
   await idb.set('bg', blob); $('settingBgUrl').value = ''; await applyBackground(); showToast("Đã áp dụng hình nền thành công!"); closeCrop();
 });
 
-// --- XỬ LÝ NHẤN GIỮ 0.5S (JIGGLE MODE) ---
+// --- XỬ LÝ NHẤN GIỮ 0.5S (JIGGLE MODE) CHO MOBILE ---
 let pressTimer = null;
 let isEditMode = false;
+let isScrolling = false;
 
-document.addEventListener('pointerdown', e => {
+document.addEventListener('touchstart', e => {
   const folder = e.target.closest('.folder-box');
   
   if (isEditMode && !folder && !e.target.closest('[data-type="tab"]')) {
     isEditMode = false;
     document.getElementById('folderGrid').classList.remove('is-editing');
+    document.querySelectorAll('.folder-box').forEach(el => el.removeAttribute('draggable'));
     showToast("Đã lưu vị trí!");
     return;
   }
   
   if (folder && !isEditMode) {
+    isScrolling = false;
     pressTimer = setTimeout(() => {
+      if (isScrolling) return; // Không kích hoạt nếu đang vuốt màn hình
       isEditMode = true;
       document.getElementById('folderGrid').classList.add('is-editing');
-      showToast("Chế độ chỉnh sửa: Kéo thả để đổi vị trí!");
+      document.querySelectorAll('.folder-box').forEach(el => el.setAttribute('draggable', 'true'));
+      showToast("Thành công! Hãy NHẤC TAY LÊN, rồi chạm lại để kéo thư mục đi.");
       if (navigator.vibrate) navigator.vibrate(50);
     }, 500);
   }
-});
-const cancelPress = () => clearTimeout(pressTimer);
-document.addEventListener('pointerup', cancelPress);
-document.addEventListener('pointermove', cancelPress);
-document.addEventListener('pointercancel', cancelPress);
+}, { passive: true });
+
+document.addEventListener('touchmove', () => { isScrolling = true; clearTimeout(pressTimer); }, { passive: true });
+document.addEventListener('touchend', () => clearTimeout(pressTimer));
+document.addEventListener('touchcancel', () => clearTimeout(pressTimer));
 
 /* ---------- XỬ LÝ KÉO THẢ NATIVE + POLYFILL ---------- */
 let draggedItem = null;
 
 document.addEventListener('dragstart', e => {
   const folder = e.target.closest('[data-type="folder"]');
+  // Chặn rác kéo nếu chưa bật Edit Mode
   if (folder && !isEditMode) {
     e.preventDefault(); 
     return;
