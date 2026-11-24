@@ -125,6 +125,7 @@ body.editor-open .main-content{overflow:hidden}
 .saving-title{font-size:18px;font-weight:600;margin:2px 0 0;line-height:1.3}
 .saving-amount{font-size:22px;font-weight:700;margin:12px 0 6px}
 .saving-meta{font-size:12px;line-height:1.55;opacity:.92}
+.saving-note-box{margin-top:8px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.14);font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
 .saving-actions{display:flex;gap:6px;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.22)}
 .saving-mini-btn{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-super);transition:.15s}
 .saving-mini-btn:hover{background:rgba(255,255,255,.32)}
@@ -497,7 +498,7 @@ body:not(.editor-open) .container{flex-shrink:0;min-height:min-content}
     </div>
 
     <label class="field-label" for="savingNote">Nội dung sổ / Ghi chú</label>
-    <textarea id="savingNote" class="setting-input" rows="2" placeholder="Ghi chú số sổ, điều kiện rút trước hạn..."></textarea>
+    <textarea id="savingNote" class="setting-input" rows="3" placeholder="Ghi chú số sổ, điều kiện rút trước hạn, nội dung chi tiết..."></textarea>
 
     <label class="field-label">Sửa nền thẻ (Màu / Gradient hoặc Link ảnh)</label>
     <div class="bg-preset-row" id="savingPresetRow">
@@ -720,14 +721,18 @@ function calcEstimatedInterest(principal, annualRate, termMonths) {
 
 async function loadFinanceData() {
   if (!currentUser) return;
+  const localSavings = readLocalFinance('savings') || [];
   let loadedSavings = null;
   let loadedExpenses = null;
 
   try {
     const snap = await userQ(savingsCol);
-    loadedSavings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const cloudSavings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Giữ lại các sổ chỉ lưu cục bộ (chưa đẩy được lên Firestore) và hợp nhất với cloud
+    const localOnly = localSavings.filter(ls => String(ls.id).startsWith('sav_') && !cloudSavings.some(cs => cs.createdAt && cs.createdAt === ls.createdAt));
+    loadedSavings = [...localOnly, ...cloudSavings];
   } catch (e) {
-    loadedSavings = readLocalFinance('savings');
+    loadedSavings = localSavings;
   }
 
   try {
@@ -763,7 +768,6 @@ function renderFinance() {
   const totalSpent = expenseRows.reduce((sum, r) => sum + parseMoneyInput(r.spent), 0);
   const netExpense = totalReceived - totalSpent;
 
-  // Tổng số tiền đang có = Gốc sổ tiết kiệm + chênh lệch thu/chi trong bảng chi tiêu
   const totalAvailableMoney = totalPrincipal + netExpense;
 
   $('summaryTotalMoney').textContent = formatVnd(totalAvailableMoney);
@@ -777,7 +781,6 @@ function renderFinance() {
   $('summaryEstimatedInterest').textContent = `+${formatVnd(totalInterest)}`;
   $('summarySavingsCount').textContent = `${savingsList.length} sổ tiết kiệm • Sắp đáo hạn: ${nearestSaving ? `${formatShortDate(nearestSaving.mat)} (${nearestSaving.name || 'Sổ'})` : '--'}`;
 
-  // Render danh sách thẻ sổ tiết kiệm
   const grid = $('savingsGrid');
   if (!savingsList.length) {
     grid.innerHTML = `<div class="glass-panel" style="grid-column:1/-1;padding:24px;border-radius:16px;text-align:center;color:var(--color-stone-gray)">Chưa có sổ tiết kiệm nào. Bấm <strong>+ Thêm sổ tiết kiệm</strong> để tạo thẻ mới.</div>`;
@@ -800,11 +803,11 @@ function renderFinance() {
             <div class="saving-meta">
               <div>Gửi: <strong>${esc(formatShortDate(s.startDate))}</strong> (${esc(s.termMonths || 1)} tháng)</div>
               <div>Đáo hạn: <strong>${esc(formatShortDate(mat))}</strong> • Lãi: <strong>+${formatVnd(interest)}</strong></div>
-              ${s.note ? `<div style="margin-top:4px;opacity:.88">📝 ${esc(s.note)}</div>` : ''}
             </div>
+            ${s.note ? `<div class="saving-note-box">📝 ${esc(s.note)}</div>` : ''}
           </div>
           <div class="saving-actions">
-            <button class="saving-mini-btn" data-act="edit-saving" data-id="${esc(s.id)}">✏️ Sửa / Nền</button>
+            <button class="saving-mini-btn" data-act="edit-saving" data-id="${esc(s.id)}">✏️ Sửa / Nội dung</button>
             <button class="saving-mini-btn" data-act="delete-saving" data-id="${esc(s.id)}">🗑️ Xóa</button>
           </div>
         </div>
@@ -812,7 +815,6 @@ function renderFinance() {
     }).join('');
   }
 
-  // Render bảng chi tiêu 3 cột + dòng tổng cuối cùng
   const tbody = $('expenseTableBody');
   tbody.innerHTML = expenseRows.map((row, idx) => `
     <tr data-exp-id="${esc(row.id)}">
@@ -871,7 +873,7 @@ function openSavingModal(id = null) {
   document.querySelectorAll('#savingPresetRow .bg-preset-swatch').forEach(sw => sw.classList.remove('active'));
 
   if (id) {
-    const s = savingsList.find(x => x.id === id);
+    const s = savingsList.find(x => String(x.id) === String(id));
     if (!s) return;
     $('savingModalTitle').textContent = 'Sửa sổ tiết kiệm';
     $('savingName').value = s.name || '';
@@ -904,7 +906,7 @@ function closeSavingModal() {
 }
 
 const saveSavingCard = guard(async () => {
-  const editId = $('savingEditId').value;
+  const editId = $('savingEditId').value.trim();
   const name = $('savingName').value.trim();
   const bank = $('savingBank').value.trim();
   const principal = Math.max(0, parseMoneyInput($('savingPrincipal').value));
@@ -917,8 +919,11 @@ const saveSavingCard = guard(async () => {
   const activeSwatch = document.querySelector('#savingPresetRow .bg-preset-swatch.active');
   const bg = customBg || activeSwatch?.dataset.bg || 'linear-gradient(135deg,#1d4350,#a43931)';
 
-  if (!name && !principal) return showToast("Vui lòng nhập tên sổ hoặc số tiền gốc!");
+  if (!name && !principal && !note) {
+    return showToast("Vui lòng nhập tên sổ, số tiền gốc hoặc nội dung sổ!");
+  }
 
+  const nowIso = new Date().toISOString();
   const payload = {
     userId: currentUser.uid,
     name: name || 'Sổ tiết kiệm',
@@ -930,32 +935,55 @@ const saveSavingCard = guard(async () => {
     maturityDate,
     note,
     bg,
-    updatedAt: new Date().toISOString()
+    updatedAt: nowIso
   };
 
-  if (editId) {
-    const idx = savingsList.findIndex(x => x.id === editId);
-    if (idx !== -1) savingsList[idx] = { ...savingsList[idx], ...payload };
-    try { await updateDoc(doc(db, "finance_savings", editId), payload); } catch (e) {}
-    showToast("Đã cập nhật sổ tiết kiệm!");
-  } else {
-    const newDoc = { ...payload, createdAt: new Date().toISOString() };
-    let docId = 'sav_' + Date.now();
-    try { const ref = await addDoc(savingsCol, newDoc); docId = ref.id; } catch (e) {}
-    savingsList.unshift({ id: docId, ...newDoc });
-    showToast("Đã thêm sổ tiết kiệm mới!");
-  }
+  let cloudSaved = false;
 
-  writeLocalFinance('savings', savingsList);
-  closeSavingModal();
-  renderFinance();
+  if (editId) {
+    const idx = savingsList.findIndex(x => String(x.id) === String(editId));
+    if (idx !== -1) {
+      savingsList[idx] = { ...savingsList[idx], ...payload };
+    }
+    try {
+      if (!String(editId).startsWith('sav_')) {
+        await updateDoc(doc(db, "finance_savings", editId), payload);
+      } else {
+        const ref = await addDoc(savingsCol, { ...payload, createdAt: nowIso });
+        if (idx !== -1) savingsList[idx].id = ref.id;
+      }
+      cloudSaved = true;
+    } catch (e) {
+      console.warn("Lỗi lưu Firestore (sửa sổ):", e);
+    }
+    writeLocalFinance('savings', savingsList);
+    closeSavingModal();
+    renderFinance();
+    showToast(cloudSaved ? "Đã cập nhật nội dung sổ lên hệ thống!" : "Đã lưu nội dung sổ trên máy (kiểm tra quyền Firestore nếu cần đồng bộ).");
+  } else {
+    const localId = 'sav_' + Date.now();
+    const newDoc = { id: localId, ...payload, createdAt: nowIso };
+    savingsList.unshift(newDoc);
+    try {
+      const ref = await addDoc(savingsCol, { ...payload, createdAt: nowIso });
+      const added = savingsList.find(x => x.id === localId);
+      if (added) added.id = ref.id;
+      cloudSaved = true;
+    } catch (e) {
+      console.warn("Lỗi lưu Firestore (tạo sổ):", e);
+    }
+    writeLocalFinance('savings', savingsList);
+    closeSavingModal();
+    renderFinance();
+    showToast(cloudSaved ? "Đã thêm sổ & lưu nội dung thành công!" : "Đã lưu sổ trên máy (kiểm tra quyền Firestore nếu cần đồng bộ).");
+  }
 });
 
 const deleteSavingCard = guard(async id => {
   if (!confirm("Xóa sổ tiết kiệm này?")) return;
-  savingsList = savingsList.filter(s => s.id !== id);
+  savingsList = savingsList.filter(s => String(s.id) !== String(id));
   writeLocalFinance('savings', savingsList);
-  try { await deleteDoc(doc(db, "finance_savings", id)); } catch (e) {}
+  try { if (!String(id).startsWith('sav_')) await deleteDoc(doc(db, "finance_savings", id)); } catch (e) {}
   renderFinance();
   showToast("Đã xóa sổ tiết kiệm.");
 });
@@ -982,9 +1010,9 @@ const addExpenseRow = guard(async () => {
 });
 
 const deleteExpenseRow = guard(async id => {
-  expenseRows = expenseRows.filter(r => r.id !== id);
+  expenseRows = expenseRows.filter(r => String(r.id) !== String(id));
   writeLocalFinance('expenses', expenseRows);
-  try { if (!id.startsWith('exp_')) await deleteDoc(doc(db, "finance_expenses", id)); } catch (e) {}
+  try { if (!String(id).startsWith('exp_')) await deleteDoc(doc(db, "finance_expenses", id)); } catch (e) {}
   renderFinance();
 });
 
@@ -995,7 +1023,7 @@ const clearAllExpenses = guard(async () => {
   writeLocalFinance('expenses', expenseRows);
   try {
     const batch = writeBatch(db);
-    oldIds.forEach(id => { if (!id.startsWith('exp_')) batch.delete(doc(db, "finance_expenses", id)); });
+    oldIds.forEach(id => { if (!String(id).startsWith('exp_')) batch.delete(doc(db, "finance_expenses", id)); });
     await batch.commit();
   } catch (e) {}
   renderFinance();
@@ -1008,7 +1036,7 @@ $('expenseTableBody').addEventListener('input', e => {
   if (!inp) return;
   const id = inp.dataset.expId;
   const field = inp.dataset.expField;
-  const row = expenseRows.find(r => r.id === id);
+  const row = expenseRows.find(r => String(r.id) === String(id));
   if (!row) return;
 
   if (field === 'content') {
@@ -1022,7 +1050,7 @@ $('expenseTableBody').addEventListener('input', e => {
   clearTimeout(expSaveTimer);
   expSaveTimer = setTimeout(async () => {
     try {
-      if (row.id && !row.id.startsWith('exp_')) {
+      if (row.id && !String(row.id).startsWith('exp_')) {
         await updateDoc(doc(db, "finance_expenses", row.id), {
           content: row.content || '',
           received: parseMoneyInput(row.received),
