@@ -119,6 +119,7 @@ body.editor-open .main-content{overflow:hidden}
 .saving-card{position:relative;border-radius:16px;padding:20px;min-height:175px;border:1px solid var(--color-soft-mist);background-color:var(--user-btn-color);background-size:cover;background-position:center;color:#fff;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.1);transition:transform .2s,box-shadow .2s}
 .saving-card:hover{transform:translateY(-3px);box-shadow:0 14px 28px rgba(0,0,0,.16)}
 .saving-card::after{content:'';position:absolute;inset:0;background:linear-gradient(160deg,rgba(0,0,0,.45),rgba(0,0,0,.82));pointer-events:none;z-index:0}
+.saving-card.has-img::after{background:linear-gradient(160deg,rgba(0,0,0,.25),rgba(0,0,0,.6))}
 .saving-card > *{position:relative;z-index:1}
 .saving-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .saving-bank{font-size:12px;text-transform:uppercase;letter-spacing:.7px;opacity:.85;font-weight:600}
@@ -796,7 +797,7 @@ function renderFinance() {
       const interest = calcEstimatedInterest(s.principal, s.rate, s.termMonths);
       const bgStyle = safeCardBg(s.bg);
       return `
-        <div class="saving-card" style="background:${esc(bgStyle)}">
+        <div class="saving-card${bgStyle.startsWith('url(') ? ' has-img' : ''}" style="background-image:${esc(bgStyle)};background-size:cover;background-position:center">
           <div class="saving-top">
             <div>
               <div class="saving-bank">${esc(s.bank || 'SỔ TIẾT KIỆM')}</div>
