@@ -579,7 +579,7 @@ const safeCardBg = bg => {
   const v = String(bg || '').trim();
   if (!v) return 'linear-gradient(135deg,#1d4350,#a43931)';
   if (/^linear-gradient\([a-z0-9\s,#%.-]+\)$/i.test(v)) return v;
-  if (/^(https?:|data:image\/)/i.test(v)) return `url("${encodeURI(v)}")`;
+  if (/^(https?:|data:image\/)/i.test(v)) return cssUrl(v);
   return 'linear-gradient(135deg,#1d4350,#a43931)';
 };
 const cleanHtml = h => window.DOMPurify ? DOMPurify.sanitize(h || '') : esc(h || '');
@@ -588,6 +588,10 @@ const shortDateFmt = new Intl.DateTimeFormat('vi-VN', { year:'numeric', month:'2
 const formatDate = s => { const d = s && new Date(s); return d && !isNaN(d) ? dateFmt.format(d) : ""; };
 const formatShortDate = s => { const d = s && new Date(s); return d && !isNaN(d) ? shortDateFmt.format(d) : "--/--/----"; };
 const countText = t => { t = t.trim(); return t ? t.split(/\s+/).length : 0; };
+const pad2 = n => String(n).padStart(2, '0');
+const toISODate = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const todayISO = () => toISODate(new Date());
+const cssUrl = u => `url("${encodeURI(u).replace(/["'()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())}")`;
 
 const vndFmt = new Intl.NumberFormat('vi-VN');
 const formatVnd = n => `${vndFmt.format(Math.round(Number(n) || 0))} ₫`;
@@ -605,8 +609,9 @@ function showToast(m) {
 }
 const guard = (fn, msg = "Có lỗi xảy ra!") => async (...a) => { try { return await fn(...a); } catch (e) { console.error(e); showToast(msg); } };
 
+let idbConn;
 const idb = {
-  open: () => new Promise((res, rej) => { const r = indexedDB.open('notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  open: () => idbConn ??= new Promise((res, rej) => { const r = indexedDB.open('notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => { idbConn = null; rej(r.error); }; }),
   async tx(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', mode); const q = fn(t.objectStore('kv')); t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error); }); },
   get(k) { return this.tx('readonly', s => s.get(k)); },
   set(k, v) { return this.tx('readwrite', s => s.put(v, k)); },
@@ -667,12 +672,12 @@ function setDark(on) {
   try { localStorage.setItem('savedDarkMode', on); } catch(e){} 
 }
 function setTitle(t) { const v = t.trim() || "My Notebook"; document.title = v; document.querySelectorAll('.app-title-display').forEach(el => el.textContent = v); }
-function setBg(url) { document.body.style.backgroundImage = url ? `url("${url}")` : "none"; document.body.dataset.hasBg = url ? "true" : "false"; }
+function setBg(url) { document.body.style.backgroundImage = url ? cssUrl(url) : "none"; document.body.dataset.hasBg = url ? "true" : "false"; }
 async function applyBackground() {
   let blob = null; try { blob = await idb.get('bg'); } catch {}
   if (blob) { if (bgObjectUrl) URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = URL.createObjectURL(blob); setBg(bgObjectUrl); } else { setBg(safeUrl(settings.bgUrl)); }
 }
-function renderImageHistory() { $('imageHistoryGrid').innerHTML = (settings.recentImages || []).filter(safeUrl).map(u => `<div class="history-img-box" style="background-image:url('${esc(encodeURI(u))}')" data-act="pick-history" data-url="${esc(u)}" title="${esc(u)}"></div>`).join(''); }
+function renderImageHistory() { $('imageHistoryGrid').innerHTML = (settings.recentImages || []).filter(safeUrl).map(u => `<div class="history-img-box" style="background-image:${esc(cssUrl(u))}" data-act="pick-history" data-url="${esc(u)}" title="${esc(u)}"></div>`).join(''); }
 function applySettingsToUI() {
   $('settingBgUrl').value = settings.bgUrl || ""; $('darkModeToggle').checked = settings.isDark; setDark(settings.isDark);
   document.documentElement.style.setProperty('--editor-fs', (settings.fontSize || "16") + 'px'); $('fontSizeSlider').value = settings.fontSize || "16";
@@ -690,6 +695,7 @@ const saveVisualSettings = guard(async () => {
 });
 
 const byCreated = (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '');
+const byOrder = (a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b);
 const userQ = col => getDocs(query(col, where("userId", "==", currentUser.uid)));
 
 // --- TÀI CHÍNH: SỔ TIẾT KIỆM & BẢNG CHI TIÊU ---
@@ -709,7 +715,7 @@ function calcMaturityISO(startDateStr, termMonths) {
   if (target.getMonth() !== ((base.getMonth() + months) % 12 + 12) % 12) {
     target.setDate(0);
   }
-  return target.toISOString().slice(0, 10);
+  return toISODate(target);
 }
 
 function calcEstimatedInterest(principal, annualRate, termMonths) {
@@ -880,7 +886,7 @@ function openSavingModal(id = null) {
     $('savingBank').value = s.bank || '';
     $('savingPrincipal').value = s.principal ?? '';
     $('savingRate').value = s.rate ?? '';
-    $('savingStartDate').value = s.startDate || new Date().toISOString().slice(0, 10);
+    $('savingStartDate').value = s.startDate || todayISO();
     $('savingTermMonths').value = s.termMonths || 6;
     $('savingNote').value = s.note || '';
     const matchSwatch = [...document.querySelectorAll('#savingPresetRow .bg-preset-swatch')].find(sw => sw.dataset.bg === s.bg);
@@ -892,7 +898,7 @@ function openSavingModal(id = null) {
     $('savingBank').value = '';
     $('savingPrincipal').value = '';
     $('savingRate').value = '5.0';
-    $('savingStartDate').value = new Date().toISOString().slice(0, 10);
+    $('savingStartDate').value = todayISO();
     $('savingTermMonths').value = '6';
     $('savingNote').value = '';
     document.querySelector('#savingPresetRow .bg-preset-swatch')?.classList.add('active');
@@ -911,7 +917,7 @@ const saveSavingCard = guard(async () => {
   const bank = $('savingBank').value.trim();
   const principal = Math.max(0, parseMoneyInput($('savingPrincipal').value));
   const rate = Math.max(0, parseFloat($('savingRate').value) || 0);
-  const startDate = $('savingStartDate').value || new Date().toISOString().slice(0, 10);
+  const startDate = $('savingStartDate').value || todayISO();
   const termMonths = Math.max(1, parseInt($('savingTermMonths').value, 10) || 1);
   const maturityDate = calcMaturityISO(startDate, termMonths);
   const note = $('savingNote').value.trim();
@@ -1030,7 +1036,7 @@ const clearAllExpenses = guard(async () => {
   showToast("Đã làm mới bảng chi tiêu.");
 });
 
-let expSaveTimer;
+const expTimers = new Map();
 $('expenseTableBody').addEventListener('input', e => {
   const inp = e.target.closest('[data-exp-id]');
   if (!inp) return;
@@ -1047,8 +1053,8 @@ $('expenseTableBody').addEventListener('input', e => {
   }
 
   writeLocalFinance('expenses', expenseRows);
-  clearTimeout(expSaveTimer);
-  expSaveTimer = setTimeout(async () => {
+  clearTimeout(expTimers.get(row.id));
+  expTimers.set(row.id, setTimeout(async () => {
     try {
       if (row.id && !String(row.id).startsWith('exp_')) {
         await updateDoc(doc(db, "finance_expenses", row.id), {
@@ -1058,7 +1064,7 @@ $('expenseTableBody').addEventListener('input', e => {
         });
       }
     } catch (err) {}
-  }, 500);
+  }, 500));
 });
 
 $('expenseTableBody').addEventListener('blur', e => {
@@ -1103,13 +1109,12 @@ function closeFinanceView() {
 
 async function loadCoreData() {
   if (!currentUser) return;
-  const [, tabSnap, folderSnap, entrySnap] = await Promise.all([loadUserSettings(), userQ(tabsCol), userQ(foldersCol), userQ(diaryCol)]);
-  allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
-  allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  const [, tabSnap, folderSnap, entrySnap] = await Promise.all([loadUserSettings(), userQ(tabsCol), userQ(foldersCol), userQ(diaryCol), loadFinanceData()]);
+  allTabs = tabSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+  allFolders = folderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
   entriesCache = entrySnap.docs.map(d => ({ id: d.id, ...d.data() }));
   if (!allTabs.length) { const r = await addDoc(tabsCol, { userId: currentUser.uid, name: "Chung", createdAt: new Date().toISOString(), order: 0 }); allTabs.push({ id: r.id, name: "Chung", createdAt: new Date().toISOString(), order: 0 }); }
   currentTabId = allTabs[0].id;
-  await loadFinanceData();
   renderAll();
 }
 function renderAll() { renderTabs(); renderFolderSelect(); renderSidebarSettings(); renderEntries(); }
@@ -1120,13 +1125,13 @@ function renderTabs() {
   $('tabsContainer').innerHTML = tabBtns + financeBtn;
 }
 function renderFolderSelect() {
-  const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  const sel = $('folderSelect'), cur = sel.value, fs = allFolders.filter(f => f.tabId === currentTabId).sort(byOrder);
   sel.innerHTML = '<option value="">-- Không xếp thư mục --</option>' + fs.map(f => `<option value="${esc(f.id)}">📁 ${esc(f.name)}</option>`).join('');
   if (fs.some(f => f.id === cur)) sel.value = cur;
 }
 function renderSidebarSettings() {
   $('tabSettingsList').innerHTML = allTabs.map(t => `<div class="list-item-row"><span>${esc(t.name)}</span><div><button class="icon-btn" data-act="edit-tab" data-id="${esc(t.id)}">✏️</button><button class="icon-btn" data-act="delete-tab" data-id="${esc(t.id)}">🗑️</button></div></div>`).join('');
-  const fs = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  const fs = allFolders.filter(f => f.tabId === currentTabId).sort(byOrder);
   $('folderSettingsList').innerHTML = fs.length ? fs.map(f => `<div class="list-item-row"><span>${esc(f.name)}</span><div><button class="icon-btn" data-act="edit-folder" data-id="${esc(f.id)}">✏️</button><button class="icon-btn" data-act="delete-folder" data-id="${esc(f.id)}">🗑️</button></div></div>`).join('') : '<div style="font-size:13px;color:var(--color-stone-gray);font-style:italic">Chưa có thư mục</div>';
 }
 
@@ -1142,7 +1147,7 @@ function buildTable(list) {
 let viewEntries = []; 
 function renderEntries() {
   const sorted = [...entriesCache].sort((a, b) => byCreated(b, a));
-  const tabFolders = allFolders.filter(f => f.tabId === currentTabId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || byCreated(a, b));
+  const tabFolders = allFolders.filter(f => f.tabId === currentTabId).sort(byOrder);
   const folderIds = new Set(tabFolders.map(f => f.id)); const firstTab = allTabs[0]?.id; viewEntries = []; const loose = [];
   
   for (const d of sorted) {
@@ -1152,12 +1157,12 @@ function renderEntries() {
     viewEntries.push(e); if (!d.folderId || !folderIds.has(d.folderId)) loose.push(e);
   }
   
-  $('sidebarHistoryList').innerHTML = viewEntries.length ? viewEntries.map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('') : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
+  $('sidebarHistoryList').innerHTML = viewEntries.length ? viewEntries.slice(0, 30).map(e => `<li class="history-item"><a href="#" data-act="open-entry" data-id="${esc(e.id)}"><div class="history-title">${esc(e.title)}</div><div class="history-date">${esc(e.dateStr)}</div></a></li>`).join('') : '<li style="font-size:13px;color:var(--color-stone-gray)">Chưa có hoạt động</li>';
   
   $('folderGrid').innerHTML = tabFolders.map(f => { 
     const img = safeUrl(f.image); 
     const dragAttr = isEditMode ? 'draggable="true"' : '';
-    return `<div class="folder-box" data-type="folder" ${dragAttr} ${img ? `style="background-image:url('${esc(encodeURI(img))}')"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
+    return `<div class="folder-box" data-type="folder" ${dragAttr} ${img ? `style="background-image:${esc(cssUrl(img))}"` : ''} data-act="open-folder" data-id="${esc(f.id)}"><div class="folder-name">${esc(f.name)}</div></div>`; 
   }).join('');
   
   if (isEditMode) $('folderGrid').classList.add('is-editing');
@@ -1186,17 +1191,13 @@ const editFolder = guard(async id => {
   await updateDoc(doc(db, "notebook_folders", id), { name: n.trim(), image: img.trim() }); Object.assign(f, { name: n.trim(), image: img.trim() }); renderAll();
 });
 
-let switching = false;
 function switchTab(id) {
-  if (switching) return;
-  switching = true;
   isFinanceViewOpen = false;
   $('financeView').style.display = 'none';
   if (id !== currentTabId) currentTabId = id;
   closeEditor();
   closeFolderView();
   renderAll();
-  switching = false;
 }
 function openFolderView(id) {
   const f = allFolders.find(x => x.id === id); if (!f) return; currentFolderViewId = id; isFinanceViewOpen = false;
@@ -1341,7 +1342,7 @@ document.addEventListener('drop', async e => {
       renderTabs(); 
       const batch = writeBatch(db);
       allTabs.forEach((t, i) => { t.order = i; batch.update(doc(db, "notebook_tabs", t.id), { order: i }); });
-      await batch.commit();
+      await batch.commit().catch(() => showToast("Không lưu được thứ tự!"));
     }
   }
 
@@ -1355,7 +1356,7 @@ document.addEventListener('drop', async e => {
       renderEntries(); 
       const batch = writeBatch(db);
       allFolders.forEach((f, i) => { f.order = i; batch.update(doc(db, "notebook_folders", f.id), { order: i }); });
-      await batch.commit();
+      await batch.commit().catch(() => showToast("Không lưu được thứ tự!"));
     }
   }
 
